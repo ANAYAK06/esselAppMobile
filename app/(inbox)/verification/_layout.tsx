@@ -1,7 +1,7 @@
-// app/(inbox)/_layout.tsx
+// app/(inbox)/verification/_layout.tsx
 import { Stack } from 'expo-router';
 
-export default function InboxLayout() {
+export default function VerificationLayout() {
     return (
         <Stack
             screenOptions={{

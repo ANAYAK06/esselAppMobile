@@ -8,10 +8,12 @@ import {
     View,
     Text,
     TouchableOpacity,
+
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context'
 import { useDispatch, useSelector } from 'react-redux';
 import { CheckCircle, RefreshCw, AlertCircle } from 'lucide-react-native';
+import { useRouter, usePathname } from 'expo-router';
 
 // Import notification actions and selectors
 import {
@@ -43,6 +45,8 @@ interface InboxScreenProps {
 
 const InboxScreen: React.FC<InboxScreenProps> = ({ navigation }) => {
     const dispatch = useDispatch<AppDispatch>();
+
+    const router = useRouter();
 
     // Redux selectors
     const notificationsSummary = useSelector(selectNotificationsSummary);
@@ -109,28 +113,31 @@ const InboxScreen: React.FC<InboxScreenProps> = ({ navigation }) => {
         }
     };
 
+    // Add this function to your InboxScreen.tsx
+
     const handleNotificationPress = (item: NotificationsSummaryItem) => {
-        Alert.alert(
-            item.ModuleDisplayName,
-            `${item.TotalPendingCount} items pending\nCategory: ${item.ModuleCategory || 'N/A'}`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'View Details',
-                    onPress: () => {
-                        console.log('Navigate to details:', {
-                            masterId: item.MasterId,
-                            moduleDisplayName: item.ModuleDisplayName,
-                            navigationPath: item.NavigationPath
-                        });
+        console.log('📱 Notification pressed:', item.ModuleDisplayName);
 
-                        Alert.alert('Coming Soon', 'Detail navigation will be implemented');
-                    }
-                }
-            ]
-        );
+        const moduleName = item.ModuleDisplayName?.toLowerCase() || '';
+
+        // Budget amendments
+        if (moduleName.includes('budget') || moduleName.includes('cc amend')) {
+            router.push('/(inbox)/verification/cc-budget/list');
+        }
+        // Purchase Orders
+
+        // Supplier Invoice
+
+        // Cost Center
+
+        // Generic fallback
+        else {
+            Alert.alert(
+                'Coming Soon',
+                `${item.ModuleDisplayName} verification will be available soon.`
+            );
+        }
     };
-
     const renderEmptyState = () => (
         <View className="flex-1 items-center justify-center px-8 mt-20">
             <CheckCircle size={64} color="#22c55e" />

@@ -27,6 +27,8 @@ import {
     loadFromStorage
 } from '@/src/slice/auth/authSlice';
 
+import NetworkDebug from "@/src/components/debug/NetworkDebug";
+
 // Validation Schema
 const validationSchema = Yup.object({
     employeeId: Yup.string()
@@ -391,6 +393,7 @@ export default function LoginScreen() {
                                 </Text>
                             </Text>
                         </View>
+
                     </View>
                 </ScrollView>
             </LinearGradient>

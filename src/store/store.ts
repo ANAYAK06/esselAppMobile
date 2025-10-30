@@ -6,6 +6,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Import auth slice
 import authReducer from '../slice/auth/authSlice';
 import inboxNotificationReducer from '../slice/notifications/inboxNotificationsSlice'
+import ccBudgetAmendmentReducer from '@/src/slice/budget/ccBudgetAmendmentSlice'
+import remarksReducer from '@/src/slice/common/remarksSlice';
+import statusReducer from '@/src/slice/common/statusSlice'
+import indentReducer from '@/src/slice/indent/indentSlice'
 // Configure Redux Persist
 const persistConfig = {
     key: 'root',
@@ -18,7 +22,12 @@ const persistConfig = {
 // Root reducer - combining all slices
 const rootReducer = combineReducers({
     auth: authReducer,
-    inboxnotifications:inboxNotificationReducer
+    inboxnotifications:inboxNotificationReducer,
+    ccBudgetAmendment:ccBudgetAmendmentReducer,
+    remarks: remarksReducer,
+    status: statusReducer,
+    indent: indentReducer,
+
 
 });
 

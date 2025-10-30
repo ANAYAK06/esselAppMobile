@@ -1,13 +1,15 @@
+// Update your API config with more logging
 const getLocalIP = () => {
-    if (__DEV__) {
-        // Replace with your actual development machine IP
-        return 'http://esseltestapi.esselprojects.com/api';
-    }
-    return 'http://esseltestapi.esselprojects.com/api';
+    const url = 'https://myesselapi.esselprojects.com/api';
+    console.log('🌐 API_BASE_URL set to:', url);
+    return url;
 };
 
 const API_BASE_URL = __DEV__
     ? getLocalIP()
-    : `http://myesselapi.esselprojects.com/api`;
+    : 'https://myesselapi.esselprojects.com/api';
+
+console.log('🔧 Final API_BASE_URL:', API_BASE_URL);
+console.log('🔧 Development mode:', __DEV__);
 
 export { API_BASE_URL };

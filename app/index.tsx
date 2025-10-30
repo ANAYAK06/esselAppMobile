@@ -346,7 +346,7 @@ export default function SplashScreen() {
                                 textShadowRadius: 2,
                             }}
                         >
-                            Building Tomorrow's Infrastructure
+                            Building Tomorrow&#39;s Infrastructure
                         </Text>
                         <View
                             className="px-4 py-2 rounded-full"
