@@ -5,19 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="db74f1f1-0245-4f51-ac60-5e24ba6a6557" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/app/(inbox)/verification/indent/[id].tsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/(inbox)/verification/indent/_layout.tsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/(inbox)/verification/indent/list.tsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/verification/Card/indentItemCard.tsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/verification/RemarksHistory/IndentRemarksHistory.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app.json" beforeDir="false" afterPath="$PROJECT_DIR$/app.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/eas.json" beforeDir="false" afterPath="$PROJECT_DIR$/eas.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/api/indent/indentAPI.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/indent/indentAPI.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/inbox/InboxScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/inbox/InboxScreen.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/slice/indent/indentSlice.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/slice/indent/indentSlice.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/(inbox)/verification/indent/[id].tsx" beforeDir="false" afterPath="$PROJECT_DIR$/app/(inbox)/verification/indent/[id].tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/verification/RemarksHistory/IndentRemarksHistory.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/verification/RemarksHistory/IndentRemarksHistory.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -80,6 +70,7 @@
       <workItem from="1761796699699" duration="19334000" />
       <workItem from="1761890884289" duration="11604000" />
       <workItem from="1761970031256" duration="111000" />
+      <workItem from="1761979300362" duration="2231000" />
     </task>
     <servers />
   </component>

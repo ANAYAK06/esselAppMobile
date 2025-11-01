@@ -1,5 +1,5 @@
 // app/(inbox)/verification/indent/[id].tsx
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
@@ -11,6 +11,8 @@ import {
     Alert,
     TouchableOpacity,
     TextInput,
+    KeyboardAvoidingView,
+    Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CheckCircle, Circle, Package } from 'lucide-react-native';
@@ -68,6 +70,8 @@ export default function IndentDetailPage() {
     // Local state
     const [remarks, setRemarks] = useState('');
     const [isVerified, setIsVerified] = useState(false);
+
+    const scrollViewRef = useRef<ScrollView>(null);
 
     const safeNavigateBack = useCallback(() => {
         try {
@@ -254,7 +258,19 @@ export default function IndentDetailPage() {
             <StatusBar style="dark" />
             <AppHeader title="Indent Verification" showBackButton={true} />
 
-            <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                className="flex-1"
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+            >
+
+            <ScrollView
+                ref={scrollViewRef}
+                showsVerticalScrollIndicator={false}
+                className="flex-1"
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ paddingBottom: 32 }}
+            >
                 {/* Header Card */}
                 <View className="bg-white mx-4 mt-4 rounded-xl p-6 shadow-sm border border-gray-100">
                     <View className="flex-row items-center justify-between mb-4">
@@ -362,6 +378,11 @@ export default function IndentDetailPage() {
                         numberOfLines={4}
                         className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-gray-900"
                         textAlignVertical="top"
+                        onFocus={() => {
+                            setTimeout(() => {
+                                scrollViewRef.current?.scrollToEnd({ animated: true });
+                            }, 300);
+                        }}
                     />
                 </View>
 
@@ -378,6 +399,7 @@ export default function IndentDetailPage() {
 
                 <View className="h-32" />
             </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }

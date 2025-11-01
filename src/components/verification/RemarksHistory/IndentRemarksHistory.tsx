@@ -122,50 +122,55 @@ export default function IndentRemarksHistory({
             </TouchableOpacity>
 
             {/* Expandable Content */}
+            {/* Expandable Content */}
             {isExpanded && (
-                <ScrollView className="max-h-96">
-                    <View className="p-4 space-y-3">
-                        {allParsedRemarks.length > 0 ? (
-                            allParsedRemarks.map((remark) => (
-                                <View
-                                    key={`remark-${remark.id}`}
-                                    className={`p-4 rounded-lg border ${getActionBgColor(remark.action)}`}
-                                >
-                                    {/* Action Badge */}
-                                    <View className="flex-row items-center mb-2">
-                                        <View className="flex-row items-center flex-1">
-                                            <Text className={`font-bold text-sm ${getActionColor(remark.action)}`}>
-                                                {remark.action}
-                                            </Text>
-                                        </View>
-                                    </View>
-
-                                    {/* Role and User */}
-                                    <View className="mb-2">
-                                        <Text className="text-gray-900 font-semibold text-sm">
-                                            {remark.role}
-                                        </Text>
-                                        <Text className="text-gray-600 text-xs mt-1">
-                                            By: {remark.user}
+                <ScrollView
+                    className="max-h-96"
+                    nestedScrollEnabled={true}
+                    showsVerticalScrollIndicator={true}
+                    contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 16 }}
+                >
+                    {allParsedRemarks.length > 0 ? (
+                        allParsedRemarks.map((remark, index) => (
+                            <View
+                                key={`remark-${remark.id}`}
+                                className={`p-4 rounded-lg border ${getActionBgColor(remark.action)}`}
+                                style={{ marginBottom: index < allParsedRemarks.length - 1 ? 12 : 0 }}
+                            >
+                                {/* Action Badge */}
+                                <View className="flex-row items-center mb-2">
+                                    <View className="flex-row items-center flex-1">
+                                        <Text className={`font-bold text-sm ${getActionColor(remark.action)}`}>
+                                            {remark.action}
                                         </Text>
                                     </View>
-
-                                    {/* Comment */}
-                                    {remark.comment && (
-                                        <View className="mt-2 pt-2 border-t border-gray-200">
-                                            <Text className="text-gray-700 text-sm">
-                                                {remark.comment}
-                                            </Text>
-                                        </View>
-                                    )}
                                 </View>
-                            ))
-                        ) : (
-                            <Text className="text-gray-500 text-sm text-center py-4">
-                                No remarks to display
-                            </Text>
-                        )}
-                    </View>
+
+                                {/* Role and User */}
+                                <View className="mb-2">
+                                    <Text className="text-gray-900 font-semibold text-sm">
+                                        {remark.role}
+                                    </Text>
+                                    <Text className="text-gray-600 text-xs mt-1">
+                                        By: {remark.user}
+                                    </Text>
+                                </View>
+
+                                {/* Comment */}
+                                {remark.comment && (
+                                    <View className="mt-2 pt-2 border-t border-gray-200">
+                                        <Text className="text-gray-700 text-sm">
+                                            {remark.comment}
+                                        </Text>
+                                    </View>
+                                )}
+                            </View>
+                        ))
+                    ) : (
+                        <Text className="text-gray-500 text-sm text-center py-4">
+                            No remarks to display
+                        </Text>
+                    )}
                 </ScrollView>
             )}
         </View>
