@@ -14,8 +14,8 @@ import type {
 // ==============================================
 
 export interface IndentState {
-    // Indent Levels
-    indentLevels: IndentLevel[];
+    // Indent Levels (object with level info, not array)
+    indentLevels: IndentLevel | null;
     indentLevelsLoading: boolean;
     indentLevelsError: string | null;
 
@@ -48,7 +48,7 @@ export interface IndentState {
 }
 
 const initialState: IndentState = {
-    indentLevels: [],
+    indentLevels: null,
     indentLevelsLoading: false,
     indentLevelsError: null,
 
@@ -91,15 +91,15 @@ export const fetchIndentLevels = createAsyncThunk(
             console.log('📦 Thunk: API Response:', {
                 IsSuccessful: response.IsSuccessful,
                 hasData: !!response.Data,
-                dataLength: response.Data?.length,
+                dataType: typeof response.Data,
             });
 
-            // ✅ FIX: Check if data exists, ignore IsSuccessful flag
-            if (response.Data && Array.isArray(response.Data) && response.Data.length >= 0) {
-                console.log('✅ Data found, returning:', response.Data.length, 'items');
+            // ✅ FIX: The API returns an object with level info, not an array
+            if (response.Data) {
+                console.log('✅ Data found, returning object with level info');
                 return response.Data;
             } else if (response.IsSuccessful) {
-                return response.Data || [];
+                return response.Data || {};
             } else {
                 return rejectWithValue(response.Message || 'No indent levels available');
             }
@@ -249,20 +249,26 @@ export const verifyIndent = createAsyncThunk(
     async (verificationData: VerifyIndentPayload, { rejectWithValue }) => {
         try {
             console.log('🎯 Thunk: Verifying Indent:', {
-                Indno: verificationData.Indno,
-                VerificationType: verificationData.VerificationType,
+                Indent: verificationData.Indent,
+                Appstatus: verificationData.Appstatus,
             });
 
             const response = await indentAPI.verifyIndent(verificationData);
 
             console.log('📦 Thunk: Verification Response:', {
                 IsSuccessful: response.IsSuccessful,
+                ResponseCode: response.ResponseCode,
                 Message: response.Message,
+                Data: response.Data,
             });
 
-            if (response.IsSuccessful) {
+            // ✅ FIX: Backend returns ResponseCode 200 even when IsSuccessful is false
+            // Check ResponseCode first, then IsSuccessful as fallback
+            if (response.ResponseCode === 200 || response.IsSuccessful) {
+                console.log('✅ Verification completed successfully');
                 return response.Data;
             } else {
+                console.error('❌ Verification failed:', response.Message);
                 return rejectWithValue(response.Message || 'Verification failed');
             }
         } catch (error: any) {

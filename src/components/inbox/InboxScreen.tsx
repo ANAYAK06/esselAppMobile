@@ -124,6 +124,11 @@ const InboxScreen: React.FC<InboxScreenProps> = ({ navigation }) => {
         if (moduleName.includes('budget') || moduleName.includes('cc amend')) {
             router.push('/(inbox)/verification/cc-budget/list');
         }
+        //
+        if (moduleName.includes('indent') || moduleName.includes('procurement')) {
+            router.push('/(inbox)/verification/indent/list');
+        }
+
         // Purchase Orders
 
         // Supplier Invoice

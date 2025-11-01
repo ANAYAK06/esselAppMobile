@@ -8,11 +8,16 @@
     "scheme": "esselmob",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "updates": {
+      "url": "https://u.expo.dev/cd3e582e-49f8-4a79-b4ba-efbcac352683"
+    },
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
     "ios": {
       "supportsTablet": true
     },
     "android": {
-
       "package": "com.anayak06.ESSELMOB",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -20,7 +25,6 @@
         "backgroundImage": "./assets/images/android-icon-background.png"
       },
       "edgeToEdgeEnabled": true
-
     },
     "web": {
       "output": "static",

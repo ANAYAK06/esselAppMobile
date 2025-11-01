@@ -10,13 +10,17 @@ export interface ApiResponse<T> {
     IsSuccessful: boolean;
     Message: string;
     Data: T;
+    ResponseCode?: number; // Backend includes this field
 }
 
 // Indent Level Item
 export interface IndentLevel {
-    LevelId: string;
-    LevelName: string;
-    LevelOrder: number;
+    LevelId?: string;
+    LevelName?: string;
+    LevelOrder?: number;
+    IndentPresentLevel?: number;
+    IndentDefineLevel?: number;
+    NewItemDefineLevel?: number;
     [key: string]: any;
 }
 
@@ -49,27 +53,22 @@ export interface IndentVerificationItem {
 
 // Indent Remark
 export interface IndentRemark {
-    RemarkId: string;
-    Indno: string;
-    Remark: string;
-    RemarkedBy: string;
-    RemarkedDate: string;
-    RemarkType?: string;
-    [key: string]: any;
+    Remarks: string;
 }
-
-// Verify Indent Payload
+// Verify Indent Payload (Web Application Format)
 export interface VerifyIndentPayload {
-    Indno: string;
+    Rowid: string;
+    Appstatus: string;
+    AprovalRemarks: string;
+    Remarks: string;
+    Crtdby: string;
+    Createdby: string;
+    Indent: string;
+    IndentNo: string;
     Roleid: string;
-    Userid: string;
-    VerificationType: string; // "Approve", "Reject", "Return"
-    Remarks?: string;
-    ApprovalNote?: string;
-    CreatedBy?: string;
+    RoleId: string;
     [key: string]: any;
 }
-
 // ==============================================
 // API FUNCTIONS
 // ==============================================
@@ -81,11 +80,11 @@ export interface VerifyIndentPayload {
 export const getIndentLevels = async (
     moId: string,
     roleId: string
-): Promise<ApiResponse<IndentLevel[]>> => {
+): Promise<ApiResponse<IndentLevel>> => {
     try {
         console.log('📊 Getting Indent Levels:', { moId, roleId });
 
-        const response = await axios.get<ApiResponse<IndentLevel[]>>(
+        const response = await axios.get<ApiResponse<IndentLevel>>(
             `${API_BASE_URL}/Purchase/GetIndentLevels?MOID=${moId}&Roleid=${roleId}`,
             {
                 headers: {
@@ -178,10 +177,10 @@ export const verifyIndent = async (
         console.log('🎯 Verifying Indent...');
 
         console.log('📊 Verification Payload Summary:', {
-            Indno: verificationData.Indno,
-            Roleid: verificationData.Roleid,
-            Userid: verificationData.Userid,
-            VerificationType: verificationData.VerificationType,
+            Indent: verificationData.Indent,
+            Rowid: verificationData.Rowid,
+            Appstatus: verificationData.Appstatus,
+            Crtdby: verificationData.Crtdby,
             hasRemarks: !!verificationData.Remarks,
             totalParameters: Object.keys(verificationData).length
         });
@@ -189,16 +188,29 @@ export const verifyIndent = async (
         // Log full payload for debugging
         console.log('📤 Full Verification Payload:', JSON.stringify(verificationData, null, 2));
 
+        // Log full payload for debugging
+        console.log('📤 Full Verification Payload:', JSON.stringify(verificationData, null, 2));
+
+        // Create the request config
+        const requestConfig = {
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            timeout: 30000
+        };
+
+        console.log('🔍 Request Configuration:', {
+            method: 'PUT',
+            url: `${API_BASE_URL}/Purchase/VerifyIndent`,
+            hasAuthHeaders: !!axios.defaults.headers.common['Authorization'],
+            headers: requestConfig.headers
+        });
+
         const response = await axios.put<ApiResponse<any>>(
             `${API_BASE_URL}/Purchase/VerifyIndent`,
             verificationData,
-            {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                timeout: 30000
-            }
+            requestConfig
         );
 
         console.log('✅ Indent Verification Response:', {
