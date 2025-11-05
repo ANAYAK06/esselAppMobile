@@ -121,12 +121,15 @@ const InboxScreen: React.FC<InboxScreenProps> = ({ navigation }) => {
         const moduleName = item.ModuleDisplayName?.toLowerCase() || '';
 
         // Budget amendments
-        if (moduleName.includes('budget') || moduleName.includes('cc amend')) {
+        if (moduleName.includes('cost center budget amend') || moduleName.includes('cc amend')) {
             router.push('/(inbox)/verification/cc-budget/list');
         }
         //
-        if (moduleName.includes('indent') || moduleName.includes('procurement')) {
+       else if (moduleName.includes('indent') || moduleName.includes('procurement')) {
             router.push('/(inbox)/verification/indent/list');
+        }
+        else if (moduleName.includes('account head amend')|| moduleName.includes('dca amend')){
+            router.push('/(inbox)/verification/dca-budget/list');
         }
 
         // Purchase Orders

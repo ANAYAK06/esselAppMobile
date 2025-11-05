@@ -5,9 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="db74f1f1-0245-4f51-ac60-5e24ba6a6557" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/app/(inbox)/verification/dca-budget/[id].tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/(inbox)/verification/dca-budget/_layout.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/(inbox)/verification/dca-budget/list.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/api/budget/dcaBudgetAmendmentAPI.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/slice/budget/dcaBudgetAmendmentSlice.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/(inbox)/verification/indent/[id].tsx" beforeDir="false" afterPath="$PROJECT_DIR$/app/(inbox)/verification/indent/[id].tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/verification/RemarksHistory/IndentRemarksHistory.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/verification/RemarksHistory/IndentRemarksHistory.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/(inbox)/verification/cc-budget/[id].tsx" beforeDir="false" afterPath="$PROJECT_DIR$/app/(inbox)/verification/cc-budget/[id].tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/inbox/InboxScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/inbox/InboxScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/verification/Card/VerificationItemCard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/verification/Card/VerificationItemCard.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/store/store.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/store/store.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -71,6 +78,10 @@
       <workItem from="1761890884289" duration="11604000" />
       <workItem from="1761970031256" duration="111000" />
       <workItem from="1761979300362" duration="2231000" />
+      <workItem from="1762160432022" duration="3622000" />
+      <workItem from="1762230326902" duration="18981000" />
+      <workItem from="1762330235557" duration="4721000" />
+      <workItem from="1762336751188" duration="595000" />
     </task>
     <servers />
   </component>

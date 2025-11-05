@@ -36,8 +36,14 @@ const VerificationItemCard: React.FC<VerificationItemCardProps> = ({
     };
 
     const formatAmount = (amount?: string | number) => {
-        if (!amount) return null;
+        // ✅ FIX: Allow 0, only reject null/undefined
+        if (amount == null) return '₹0';
+
         const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+
+        // ✅ Handle NaN case
+        if (isNaN(numAmount)) return '₹0';
+
         return `₹${numAmount.toLocaleString('en-IN')}`;
     };
 
@@ -64,8 +70,8 @@ const VerificationItemCard: React.FC<VerificationItemCardProps> = ({
                     {title}
                 </Text>
 
-                {/* Amount */}
-                {amount && (
+                {/* Amount - ✅ FIXED: Always show amount, even if 0 */}
+                {amount != null && (
                     <Text className="text-blue-600 text-lg font-bold mb-3">
                         {formatAmount(amount)}
                     </Text>
@@ -81,7 +87,7 @@ const VerificationItemCard: React.FC<VerificationItemCardProps> = ({
                 {/* Footer Info */}
                 <View className="flex-row items-center justify-between pt-3 border-t border-gray-100">
                     <View className="flex-1">
-                        {dueDate && (
+                        {dueDate && typeof dueDate === 'string' && dueDate.trim() !== '' && (
                             <View className="flex-row items-center mb-1">
                                 <Clock size={12} color="#9ca3af" />
                                 <Text className="text-gray-500 text-xs ml-1">
@@ -89,7 +95,7 @@ const VerificationItemCard: React.FC<VerificationItemCardProps> = ({
                                 </Text>
                             </View>
                         )}
-                        {requestedBy && (
+                        {requestedBy && typeof requestedBy === 'string' && requestedBy.trim() !== '' && (
                             <View className="flex-row items-center">
                                 <User size={12} color="#9ca3af" />
                                 <Text className="text-gray-500 text-xs ml-1" numberOfLines={1}>

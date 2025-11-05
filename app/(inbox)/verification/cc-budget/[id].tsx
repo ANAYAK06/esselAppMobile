@@ -78,7 +78,7 @@ export default function CCBudgetDetailPage() {
             if (router.canGoBack()) {
                 router.back();
             } else {
-                router.replace('/(inbox)/verification/cc-budget/list');
+                router.replace('../(inbox)/verification/cc-budget/list');
             }
         } catch (error) {
             console.error('❌ Navigation error:', error);
@@ -241,7 +241,7 @@ export default function CCBudgetDetailPage() {
                         Amendment not found
                     </Text>
                     <Text className="text-gray-500 text-sm mb-4">
-                        ID: {id}, Type: {type}
+                        {`ID: ${id}, Type: ${type}`}
                     </Text>
                     <TouchableOpacity
                         className="bg-green-500 px-6 py-3 rounded-lg"
@@ -331,12 +331,12 @@ export default function CCBudgetDetailPage() {
                     <View className="bg-gray-50 rounded-lg p-4 mb-3">
                         <Text className="text-gray-600 text-sm mb-2">Current Budget</Text>
                         <Text className="text-gray-900 text-2xl font-bold mb-3">
-                            ₹{oldBudget.toLocaleString('en-IN')}
+                            {`₹${oldBudget.toLocaleString('en-IN')}`}
                         </Text>
                         <View className="flex-row items-center justify-between pt-3 border-t border-gray-200">
                             <Text className="text-gray-600 text-xs">Balance:</Text>
                             <Text className="text-gray-900 text-sm font-semibold">
-                                ₹{oldBudgetBalance.toLocaleString('en-IN')}
+                                {`₹${oldBudgetBalance.toLocaleString('en-IN')}`}
                             </Text>
                         </View>
                     </View>
@@ -351,8 +351,7 @@ export default function CCBudgetDetailPage() {
                         <Text className={`ml-2 text-lg font-bold ${
                             amendment.AmendmentType === 'Add' ? 'text-green-600' : 'text-red-600'
                         }`}>
-                            {amendment.AmendmentType === 'Add' ? '+' : '-'}
-                            {percentChange}%
+                            {amendment.AmendmentType === 'Add' ? `+${percentChange}%` : `-${percentChange}%`}
                         </Text>
                     </View>
 
@@ -364,7 +363,7 @@ export default function CCBudgetDetailPage() {
                         <Text className={`text-2xl font-bold ${
                             amendment.AmendmentType === 'Add' ? 'text-green-700' : 'text-red-700'
                         }`}>
-                            ₹{amendedValue.toLocaleString('en-IN')}
+                            {`₹${amendedValue.toLocaleString('en-IN')}`}
                         </Text>
                     </View>
 
@@ -372,12 +371,12 @@ export default function CCBudgetDetailPage() {
                     <View className="bg-green-50 rounded-lg p-4 border-2 border-green-200">
                         <Text className="text-green-600 text-sm mb-2">Revised Budget</Text>
                         <Text className="text-green-700 text-2xl font-bold mb-3">
-                            ₹{newBudget.toLocaleString('en-IN')}
+                            {`₹${newBudget.toLocaleString('en-IN')}`}
                         </Text>
                         <View className="flex-row items-center justify-between pt-3 border-t border-green-200">
                             <Text className="text-green-600 text-xs">New Balance:</Text>
                             <Text className="text-green-700 text-sm font-semibold">
-                                ₹{newBudgetBalance.toLocaleString('en-IN')}
+                                {`₹${newBudgetBalance.toLocaleString('en-IN')}`}
                             </Text>
                         </View>
                     </View>
@@ -419,8 +418,7 @@ export default function CCBudgetDetailPage() {
                                 <Circle size={24} color="#9ca3af" />
                             )}
                             <Text className="ml-3 flex-1 text-sm text-gray-800">
-                                I have verified all amendment details including budget amounts,
-                                CC code, justification, and supporting documents
+                                I have verified all amendment details including budget amounts, CC code, justification, and supporting documents
                             </Text>
                         </View>
                     </TouchableOpacity>
@@ -428,9 +426,10 @@ export default function CCBudgetDetailPage() {
 
                 {/* Remarks Input */}
                 <View className="bg-white mx-4 mt-4 mb-4 rounded-xl p-4 border border-gray-200">
-                    <Text className="text-gray-900 font-bold mb-2">
-                        Your Remarks <Text className="text-red-500">*</Text>
-                    </Text>
+                    <View className="flex-row mb-2">
+                        <Text className="text-gray-900 font-bold">Your Remarks </Text>
+                        <Text className="text-red-500">*</Text>
+                    </View>
                     <TextInput
                         value={remarks}
                         onChangeText={setRemarks}
