@@ -17,6 +17,7 @@ export interface ApiResponse<T> {
     IsSuccessful: boolean;
     Message: string;
     Data: T;
+    ResponseCode?: number;
 }
 
 export interface EmployeeValidationData {
@@ -59,7 +60,7 @@ export const validateEmployee = async (credentials: AuthCredentials): Promise<Ap
             Password: credentials.password     // Convert password to Password (capital P)
         };
 
-        console.log('🔍 Sending to backend:', backendPayload); // DEBUG
+        console.log('🔍 Sending to backend for:', backendPayload.Username); // DEBUG (never log the password)
         console.log('🌐 API URL:', `${API_BASE_URL}/Security/GetValidEmployee`); // DEBUG
 
         const response = await axios.post<ApiResponse<EmployeeValidationData>>(
@@ -97,7 +98,7 @@ export const validateUser = async (credentials: AuthCredentials): Promise<ApiRes
             Password: credentials.password     // Convert password to Password (capital P)
         };
 
-        console.log('🔍 Sending user validation to backend:', backendPayload); // DEBUG
+        console.log('🔍 Sending user validation to backend for:', backendPayload.Username); // DEBUG (never log the password)
 
         const response = await axios.post<ApiResponse<UserValidationData>>(
             `${API_BASE_URL}/Security/GetValidUser`,

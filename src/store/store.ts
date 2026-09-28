@@ -11,6 +11,7 @@ import remarksReducer from '@/src/slice/common/remarksSlice';
 import statusReducer from '@/src/slice/common/statusSlice'
 import indentReducer from '@/src/slice/indent/indentSlice'
 import dcaAmendmentReducer from '@/src/slice/budget/dcaBudgetAmendmentSlice'
+import employeePortalReducer from '@/src/slice/hr/employeePortalSlice'
 // Configure Redux Persist
 const persistConfig = {
     key: 'root',
@@ -29,6 +30,7 @@ const rootReducer = combineReducers({
     status: statusReducer,
     indent: indentReducer,
     dcaBudgetAmendment:dcaAmendmentReducer,
+    employeePortal: employeePortalReducer,
 
 
 });

@@ -98,7 +98,7 @@ export const validateEmployee = createAsyncThunk<
     'auth/validateEmployee',
     async (credentials, { rejectWithValue }) => {
         try {
-            console.log('🔍 Calling validateEmployee API with:', credentials);
+            console.log('🔍 Calling validateEmployee API for:', credentials.employeeId);
 
             const response: ApiResponse<EmployeeValidationData> = await validateEmployeeAPI(credentials);
 
@@ -269,7 +269,9 @@ export const getEmployeeDetails = createAsyncThunk<
 
             console.log('🎯 Employee Details Response:', response);
 
-            if (response.IsSuccessful) {
+            // Accept data when present regardless of IsSuccessful — the API returns false even on
+            // success (same rule as the Corex web app)
+            if (response?.Data && (response.IsSuccessful === true || response.ResponseCode === 200)) {
                 await saveToStorage('employeeData', response.Data);
                 await saveToStorage('loginType', 'employee');
 
