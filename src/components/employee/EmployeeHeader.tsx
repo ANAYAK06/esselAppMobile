@@ -2,7 +2,7 @@
 // sidebar brand block (Essel logo, "Employee Portal", orange sub-title) plus its top-bar actions.
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, Alert } from 'react-native';
-import { Bell, LogOut } from 'lucide-react-native';
+import { Bell, LogOut, Menu } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useAppDispatch } from '@/src/store/hooks';
 import { logout } from '@/src/slice/auth/authSlice';
@@ -12,9 +12,11 @@ type Props = {
     initials: string;
     pendingCount: number;
     onBellPress: () => void;
+    onMenuPress: () => void;
+    onAvatarPress: () => void;
 };
 
-export default function EmployeeHeader({ initials, pendingCount, onBellPress }: Props) {
+export default function EmployeeHeader({ initials, pendingCount, onBellPress, onMenuPress, onAvatarPress }: Props) {
     const dispatch = useAppDispatch();
 
     const handleLogout = () => {
@@ -37,6 +39,9 @@ export default function EmployeeHeader({ initials, pendingCount, onBellPress }: 
             <View className="flex-row items-center justify-between">
                 {/* Brand */}
                 <View className="flex-row items-center gap-2.5 flex-1">
+                    <TouchableOpacity onPress={onMenuPress} className="p-2 -ml-1 rounded-lg bg-white/10" hitSlop={6}>
+                        <Menu size={20} color="#ffffff" />
+                    </TouchableOpacity>
                     <View className="w-10 h-10 rounded-lg bg-white items-center justify-center">
                         <Image
                             source={require('@/assets/images/essellogo.png')}
@@ -63,9 +68,12 @@ export default function EmployeeHeader({ initials, pendingCount, onBellPress }: 
                         )}
                     </TouchableOpacity>
 
-                    <View className="w-9 h-9 rounded-full bg-white/10 border border-orange-400/40 items-center justify-center">
+                    <TouchableOpacity
+                        onPress={onAvatarPress}
+                        className="w-9 h-9 rounded-full bg-white/10 border border-orange-400/40 items-center justify-center"
+                    >
                         <Text className="text-xs font-bold text-orange-400">{initials || '--'}</Text>
-                    </View>
+                    </TouchableOpacity>
 
                     <TouchableOpacity onPress={handleLogout} className="p-2 rounded-lg bg-white/10">
                         <LogOut size={20} color="#fca5a5" />

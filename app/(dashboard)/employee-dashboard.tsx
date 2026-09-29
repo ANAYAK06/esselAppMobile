@@ -3,10 +3,11 @@
 // (RAPP-SLAPP frontend: src/pages/EmployeePortal/pages/DashboardHome.jsx).
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Image, Alert } from 'react-native';
+import { router, type Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import {
-    ArrowRight, Bell, CalendarCheck, ClipboardCheck, Clock, CreditCard, ListChecks, Wallet,
+    ArrowRight, Bell, CalendarCheck, ChevronRight, ClipboardCheck, Clock, CreditCard, LayoutGrid, ListChecks, Wallet,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
@@ -18,9 +19,10 @@ import {
     fetchMyPortalRequests,
     fetchPortalPendingApprovals,
 } from '@/src/slice/hr/employeePortalSlice';
-import type { PortalRequest } from '@/src/api/hr/employeePortalAPI';
 import EmployeeHeader from '@/src/components/employee/EmployeeHeader';
+import EmployeeSidebar from '@/src/components/employee/EmployeeSidebar';
 import { Badge, PrimaryButton, SectionCard, StatCard } from '@/src/components/employee/PortalUI';
+import { formatRupees, requestTitle } from '@/src/components/employee/portalFormat';
 import { brand } from '@/src/theme/colors';
 
 const MONTHS = [
@@ -30,23 +32,13 @@ const MONTHS = [
 
 const leaveBarColors = ['bg-blue-500', 'bg-orange-500', 'bg-emerald-500', 'bg-rose-500', 'bg-purple-500', 'bg-cyan-500'];
 
-const quickActions: { key: string; label: string; icon: LucideIcon }[] = [
-    { key: 'request-leave', label: 'Request Leave', icon: CalendarCheck },
-    { key: 'request-advance', label: 'Request Advance', icon: Wallet },
-    { key: 'my-requests', label: 'My Requests', icon: ListChecks },
-    { key: 'loan-advance-status', label: 'Loan / Advance', icon: CreditCard },
+const quickActions: { href: Href; label: string; icon: LucideIcon }[] = [
+    { href: '/employee/request-leave', label: 'Request Leave', icon: CalendarCheck },
+    { href: '/employee/request-advance', label: 'Request Advance', icon: Wallet },
+    { href: '/employee/my-requests', label: 'My Requests', icon: ListChecks },
+    { href: '/employee/loan-advance-status', label: 'Loan / Advance', icon: CreditCard },
 ];
 
-const formatRupees = (amount: number | string | undefined) => `₹${Number(amount || 0).toLocaleString('en-IN')}`;
-
-const requestTitle = (r: PortalRequest) =>
-    r.RequestType === 'Advance'
-        ? `${r.AdvanceType === 'LTA' ? 'Long Term Advance' : 'Salary Advance'} — ${formatRupees(r.Amount)}`
-        : `${r.LeaveName || 'Leave'} — ${r.NoOfDays} day${Number(r.NoOfDays) === 1 ? '' : 's'}`;
-
-// The detail screens (leave / advance requests, approvals, ...) are not built on mobile yet
-const comingSoon = (label: string) =>
-    Alert.alert('Coming soon', `${label} will be available in the mobile app soon.`);
 
 export default function EmployeeDashboard() {
     const dispatch = useAppDispatch();
@@ -57,6 +49,7 @@ export default function EmployeeDashboard() {
     } = useAppSelector((state) => state.employeePortal);
 
     const [refreshing, setRefreshing] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const d = employeeData || {};
     const empRefNo: string | undefined = d.EmpRefno;
@@ -106,13 +99,19 @@ export default function EmployeeDashboard() {
 
     const onBellPress = () =>
         pendingCount > 0
-            ? comingSoon('Pending Approvals')
+            ? router.push('/employee/pending-approvals')
             : Alert.alert('Notifications', "You're all caught up.");
 
     return (
         <SafeAreaView className="flex-1 bg-brand-navy" edges={['top']}>
             <StatusBar style="light" />
-            <EmployeeHeader initials={initials} pendingCount={pendingCount} onBellPress={onBellPress} />
+            <EmployeeHeader
+                initials={initials}
+                pendingCount={pendingCount}
+                onBellPress={onBellPress}
+                onMenuPress={() => setSidebarOpen(true)}
+                onAvatarPress={() => router.push('/employee/profile')}
+            />
 
             <ScrollView
                 className="flex-1 bg-gray-50"
@@ -145,6 +144,7 @@ export default function EmployeeDashboard() {
                             sub={loading.leaveBalances ? undefined : `${totalUsed} of ${totalAssigned} used`}
                             icon={CalendarCheck}
                             tone="navy"
+                            onPress={() => router.push('/employee/leave-balance')}
                         />
                         <StatCard
                             label="Attendance"
@@ -152,6 +152,7 @@ export default function EmployeeDashboard() {
                             sub={`${monthName} ${year}`}
                             icon={Clock}
                             tone="orange"
+                            onPress={() => router.push('/employee/attendance')}
                         />
                     </View>
                     <View className="flex-row gap-3">
@@ -168,6 +169,7 @@ export default function EmployeeDashboard() {
                             sub="Awaiting verification"
                             icon={ListChecks}
                             tone="white"
+                            onPress={() => router.push('/employee/my-requests')}
                         />
                     </View>
                 </View>
@@ -175,10 +177,10 @@ export default function EmployeeDashboard() {
                 {/* Quick actions */}
                 <SectionCard title="Quick Actions">
                     <View className="flex-row flex-wrap justify-between gap-y-2.5">
-                        {quickActions.map(({ key, label, icon: Icon }) => (
+                        {quickActions.map(({ href, label, icon: Icon }) => (
                             <TouchableOpacity
-                                key={key}
-                                onPress={() => comingSoon(label)}
+                                key={label}
+                                onPress={() => router.push(href)}
                                 activeOpacity={0.7}
                                 className="w-[48.5%] items-center justify-center gap-2 py-4 px-2 rounded-xl border border-gray-200"
                             >
@@ -189,13 +191,22 @@ export default function EmployeeDashboard() {
                             </TouchableOpacity>
                         ))}
                     </View>
+                    <TouchableOpacity
+                        onPress={() => setSidebarOpen(true)}
+                        activeOpacity={0.7}
+                        className="flex-row items-center justify-center gap-1.5 mt-3 py-2.5 rounded-xl bg-orange-50 border border-orange-200"
+                    >
+                        <LayoutGrid size={15} color={brand.orange} />
+                        <Text className="text-xs font-semibold text-orange-600">All Services</Text>
+                        <ChevronRight size={14} color={brand.orange} />
+                    </TouchableOpacity>
                 </SectionCard>
 
                 {/* Recent requests */}
                 <SectionCard
                     title="Recent Requests"
                     action={
-                        <TouchableOpacity onPress={() => comingSoon('My Requests')} className="flex-row items-center gap-1">
+                        <TouchableOpacity onPress={() => router.push('/employee/my-requests')} className="flex-row items-center gap-1">
                             <Text className="text-xs font-semibold text-orange-500">View all</Text>
                             <ArrowRight size={12} color={brand.orange} />
                         </TouchableOpacity>
@@ -227,7 +238,7 @@ export default function EmployeeDashboard() {
                         <Text className="text-sm text-gray-600 mb-3">
                             {pendingCount} request{pendingCount !== 1 ? 's' : ''} from your team awaiting your verification.
                         </Text>
-                        <PrimaryButton label="Review Now" onPress={() => comingSoon('Pending Approvals')} />
+                        <PrimaryButton label="Review Now" onPress={() => router.push('/employee/pending-approvals')} />
                     </SectionCard>
                 ) : (
                     <SectionCard title="Leave Snapshot">
@@ -272,6 +283,8 @@ export default function EmployeeDashboard() {
                     />
                 </View>
             </ScrollView>
+
+            <EmployeeSidebar visible={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         </SafeAreaView>
     );
 }
