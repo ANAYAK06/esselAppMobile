@@ -373,7 +373,7 @@ export const loadFromStorage = createAsyncThunk<
 );
 
 // Initial State
-const initialState: AuthState = {
+export const initialState: AuthState = {
     isAuthenticated: false,
     employeeValidated: false,
     loginType: null,

@@ -2,6 +2,9 @@
 import axios from "axios";
 import { API_BASE_URL } from '@/src/service/apiConfig';
 
+// Without a timeout a hung request keeps the login sheet's buttons disabled indefinitely
+const AUTH_TIMEOUT_MS = 30000;
+
 // Type definitions for API requests and responses
 export interface AuthCredentials {
     employeeId: string;
@@ -70,7 +73,8 @@ export const validateEmployee = async (credentials: AuthCredentials): Promise<Ap
             {
                 headers: {
                     'Content-Type': 'application/json'
-                }
+                },
+                timeout: AUTH_TIMEOUT_MS,
             }
         );
 
@@ -107,7 +111,8 @@ export const validateUser = async (credentials: AuthCredentials): Promise<ApiRes
             {
                 headers: {
                     'Content-Type': 'application/json'
-                }
+                },
+                timeout: AUTH_TIMEOUT_MS,
             }
         );
         console.log('✅ Validated user data:', response.data);
@@ -134,7 +139,8 @@ export const getEmployeeDetails = async (username: string): Promise<ApiResponse<
             {
                 headers: {
                     'Content-Type': 'application/json'
-                }
+                },
+                timeout: AUTH_TIMEOUT_MS,
             }
         );
         console.log('✅ GET EmployeeDetails:', response.data);
@@ -160,7 +166,8 @@ export const getMenu = async (roleId: string): Promise<ApiResponse<MenuData[]>> 
             {
                 headers: {
                     'Content-Type': 'application/json'
-                }
+                },
+                timeout: AUTH_TIMEOUT_MS,
             }
         );
 

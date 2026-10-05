@@ -2,7 +2,7 @@
 // Corex web portal's Sidebar (pages/EmployeePortal/components/Sidebar.jsx).
 import React, { useEffect, useState } from 'react';
 import {
-    View, Text, Image, Modal, Pressable, ScrollView, TouchableOpacity, Animated, Easing, Alert, useWindowDimensions,
+    View, Text, Image, Modal, Pressable, ScrollView, TouchableOpacity, Animated, Easing, Alert, Platform, useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, usePathname } from 'expo-router';
@@ -27,6 +27,9 @@ export default function EmployeeSidebar({ visible, onClose }: Props) {
     const { isPortalReportingPerson, portalPendingApprovals } = useAppSelector((s) => s.employeePortal);
 
     const [slide] = useState(() => new Animated.Value(0));
+    // Menu item whose page opens once the Modal is fully dismissed (iOS) — pushing a screen while
+    // the Modal is still up freezes iOS (an invisible layer keeps eating touches)
+    const [pendingNav, setPendingNav] = useState<MenuItem | null>(null);
 
     useEffect(() => {
         if (!visible) return;
@@ -39,29 +42,48 @@ export default function EmployeeSidebar({ visible, onClose }: Props) {
         }).start();
     }, [visible, slide]);
 
-    // Slide out, then hide the Modal; `after` runs once it is gone
-    const close = (after?: () => void) => {
+    const navigate = ({ href, label }: MenuItem) => {
+        if (!href) return;
+        if (label === 'Dashboard') router.dismissTo(href);
+        else router.push(href);
+    };
+
+    const runPendingNav = () => {
+        if (!pendingNav) return;
+        setPendingNav(null);
+        navigate(pendingNav);
+    };
+
+    // Fallback in case iOS never reports the dismissal
+    useEffect(() => {
+        if (!pendingNav) return;
+        const timer = setTimeout(() => {
+            setPendingNav(null);
+            navigate(pendingNav);
+        }, 700);
+        return () => clearTimeout(timer);
+    }, [pendingNav]);
+
+    // Slide out, then hide the Modal; `target` opens once it is gone
+    const close = (target?: MenuItem) => {
         Animated.timing(slide, {
             toValue: 0,
             duration: 180,
             easing: Easing.in(Easing.cubic),
             useNativeDriver: true,
         }).start(() => {
+            if (target && Platform.OS === 'ios') setPendingNav(target);
             onClose();
-            after?.();
+            if (target && Platform.OS !== 'ios') navigate(target);
         });
     };
 
     const open = (item: MenuItem) => {
-        const { href, label } = item;
-        if (!href) {
-            Alert.alert('Coming soon', `${label} is being built and will be available soon.`);
+        if (!item.href) {
+            Alert.alert('Coming soon', `${item.label} is being built and will be available soon.`);
             return;
         }
-        close(() => {
-            if (label === 'Dashboard') router.dismissTo(href);
-            else router.push(href);
-        });
+        close(item);
     };
 
     const isActive = (item: MenuItem) =>
@@ -108,7 +130,14 @@ export default function EmployeeSidebar({ visible, onClose }: Props) {
     );
 
     return (
-        <Modal visible={visible} transparent animationType="none" onRequestClose={() => close()} statusBarTranslucent>
+        <Modal
+            visible={visible}
+            transparent
+            animationType="none"
+            onRequestClose={() => close()}
+            onDismiss={runPendingNav}
+            statusBarTranslucent
+        >
             <View className="flex-1 flex-row">
                 <Animated.View
                     className="bg-brand-navy"

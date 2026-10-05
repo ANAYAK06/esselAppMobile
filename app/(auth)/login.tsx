@@ -1,6 +1,6 @@
 // app/(auth)/login.tsx - Login Screen (Corex brand: white brand panel + navy form panel,
 // stacked version of the web login's two-column card)
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     View,
     Text,
@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -70,6 +70,14 @@ export default function LoginScreen() {
     const [usePassword, setUsePassword] = useState(false);
     // Credentials of a password login that may be turned into a quick login (setup sheet)
     const [pendingSetup, setPendingSetup] = useState<{ employeeId: string; password: string } | null>(null);
+    // Portal chosen in the sheet: hide the sheet first and navigate once it is fully gone —
+    // replacing the screen while the Modal is still up freezes iOS (invisible layer eats touches)
+    const [leavingTo, setLeavingTo] = useState<Href | null>(null);
+    const sheetShownRef = useRef(false);
+
+    // Employee ID + password accepted, but no portal chosen yet → one bottom sheet showing the
+    // quick-login setup first (after a password login only), then the Employee / Role options
+    const awaitingPortalChoice = isAuthenticated && employeeValidated && !loginType;
 
     // Check for existing session on mount
     useEffect(() => {
@@ -151,32 +159,36 @@ export default function LoginScreen() {
         }
     }, [success.validateEmployee, dispatch]);
 
-    // Portal chosen: remember the name for the quick-login "Welcome back" greeting, then navigate
+    // Portal chosen: remember the name for the quick-login "Welcome back" greeting
+    // (navigation happens in the redirect effect below)
     useEffect(() => {
         if (success.getEmployeeDetails) {
             quickLogin.setDisplayName(employeeId, employeeData?.Firstname);
             dispatch(clearSuccess());
-            router.replace('/employee-dashboard');
         }
-    }, [success.getEmployeeDetails, dispatch, router, employeeId, employeeData]);
+    }, [success.getEmployeeDetails, dispatch, employeeId, employeeData]);
 
     useEffect(() => {
         if (success.getMenu) {
             quickLogin.setDisplayName(employeeId, userData?.firstName);
             dispatch(clearSuccess());
-            router.replace('/role-dashboard');
         }
-    }, [success.getMenu, dispatch, router, employeeId, userData]);
+    }, [success.getMenu, dispatch, employeeId, userData]);
 
-    // Redirect if already authenticated
     useEffect(() => {
-        if (isAuthenticated && loginType) {
+        if (awaitingPortalChoice) sheetShownRef.current = true;
+    }, [awaitingPortalChoice]);
+
+    // Redirect once authenticated: straight away for a restored session, after the sheet has
+    // closed when the portal was picked in it
+    useEffect(() => {
+        if (!isAuthenticated || !loginType) return;
+        const target: Href = loginType === 'employee' ? '/employee-dashboard' : '/role-dashboard';
+        if (sheetShownRef.current) {
+            setLeavingTo(target);
+        } else {
             console.log('✅ Valid session found - redirecting to dashboard');
-            if (loginType === 'employee') {
-                router.replace('/employee-dashboard');
-            } else if (loginType === 'role') {
-                router.replace('/role-dashboard');
-            }
+            router.replace(target);
         }
     }, [isAuthenticated, loginType, router]);
 
@@ -190,9 +202,6 @@ export default function LoginScreen() {
     const submitting = loading.validateEmployee;
     const submitDisabled = submitting || !formik.isValid || !formik.dirty;
 
-    // Employee ID + password accepted, but no portal chosen yet → one bottom sheet showing the
-    // quick-login setup first (after a password login only), then the Employee / Role options
-    const awaitingPortalChoice = isAuthenticated && employeeValidated && !loginType;
     const portalLoading = loading.getEmployeeDetails || loading.validateUser || loading.getMenu;
     const showQuickLoginPanel = !!quick && !usePassword;
 
@@ -203,6 +212,7 @@ export default function LoginScreen() {
         dispatch(clearSuccess());
         formik.setFieldValue('password', '');
         setPendingSetup(null);
+        sheetShownRef.current = false;
         // A quick login set up just now should be used from the next sign-in on
         quickLogin.getQuickLogin().then(setQuick);
     };
@@ -359,8 +369,10 @@ export default function LoginScreen() {
                 </ScrollView>
             </KeyboardAvoidingView>
 
-            {awaitingPortalChoice && (
+            {(awaitingPortalChoice || leavingTo) && (
                 <BottomSheet
+                    visible={!leavingTo}
+                    onDismissed={() => leavingTo && router.replace(leavingTo)}
                     onRequestClose={() => {
                         if (pendingSetup) setPendingSetup(null); // same as "Not now"
                         else if (!portalLoading) cancelLoginOptions();
