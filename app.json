@@ -2,9 +2,9 @@
   "expo": {
     "name": "ESSELMOB",
     "slug": "ESSELMOB",
-    "version": "1.0.5",
+    "version": "1.1.0",
     "orientation": "portrait",
-    "icon": "./assets/images/sllogo.png",
+    "icon": "./assets/images/app-icon.png",
     "scheme": "esselmob",
     "userInterfaceStyle": "automatic",
     "updates": {
@@ -19,9 +19,8 @@
     "android": {
       "package": "com.anayak06.ESSELMOB",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/sllogo.png",
-        "backgroundImage": "./assets/images/android-icon-background.png"
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/images/adaptive-icon-foreground.png"
       }
     },
     "web": {
