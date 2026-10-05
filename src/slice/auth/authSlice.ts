@@ -63,6 +63,7 @@ export interface UserData {
     roleId: string;
     employeeId: string;
     ccCodes: string[];
+    groupId?: number; // approval-chain group, used by the role dashboard's pending tracking
     isFirstTimeLogin: boolean;
     isExist: boolean;
     uid: string;
@@ -186,6 +187,7 @@ export const validateUser = createAsyncThunk<
                         roleId: roleId,
                         employeeId: credentials.employeeId,
                         ccCodes: response.Data.ccCodes,
+                        groupId: Number(response.Data.GroupId) || 0,
                         isFirstTimeLogin: response.Data.IsFirstTimeLogin,
                         isExist: response.Data.IsExist,
                         uid: response.Data.UID,
@@ -223,6 +225,7 @@ export const validateUser = createAsyncThunk<
                         roleId: roleId,
                         employeeId: credentials.employeeId,
                         ccCodes: response.Data.ccCodes || [],
+                        groupId: Number(response.Data.GroupId) || 0,
                         isFirstTimeLogin: response.Data.IsFirstTimeLogin || false,
                         isExist: response.Data.IsExist || false,
                         uid: response.Data.UID || '',

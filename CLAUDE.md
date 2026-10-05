@@ -33,7 +33,7 @@ There are no automated tests configured in this project.
 - **React Native 0.81** / **React 19**
 - **NativeWind 4** + **Tailwind CSS 3** for styling
 - **Redux Toolkit 2** with **redux-persist** (auth slice only)
-- **Axios** for HTTP, pointing to `https://myesselapi.esselprojects.com/api`
+- **Axios** for HTTP — development builds hit the test API `http://myesseltestapi.esselprojects.com/api` (HTTP only; its HTTPS is broken), release builds `https://myesselapi.esselprojects.com/api` (see `src/service/apiConfig.ts`)
 - **TypeScript** (strict mode, `@/` path alias maps to project root)
 
 ### Routing Structure

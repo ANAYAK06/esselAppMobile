@@ -34,6 +34,7 @@ export interface UserValidationData {
     MailId: string;
     UserRoleCode: string;
     ccCodes: string[];
+    GroupId?: number;
     IsFirstTimeLogin: boolean;
     IsExist: boolean;
     UID: string;

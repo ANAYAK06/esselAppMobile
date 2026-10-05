@@ -1,16 +1,7 @@
-// app/inbox.tsx - Alternative Simple Route File
+// app/(inbox)/inbox.tsx
 import React from 'react';
-import { StatusBar } from 'expo-status-bar';
-import InboxScreen from '../../src/components/inbox/InboxScreen';
-import { useRouter } from 'expo-router';
+import InboxScreen from '@/src/components/inbox/InboxScreen';
 
 export default function InboxPage() {
-    const router = useRouter();
-
-    return (
-        <>
-            <StatusBar style="dark" />
-            <InboxScreen navigation={router} />
-        </>
-    );
+    return <InboxScreen />;
 }

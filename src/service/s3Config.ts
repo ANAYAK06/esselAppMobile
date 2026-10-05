@@ -15,9 +15,21 @@ export const UPLOAD_DOCS_PATH = 'Upload+docs';
 export const S3_FOLDERS = {
     CC_BUDGET_AMENDMENT: 'AmendCCBudgetPROD',
     PURCHASE_ORDER: 'PurchaseOrders',
-    SUPPLIER_PO: 'SupplierPO',
+    SUPPLIER_PO: 'SupplierPOPROD',             // same folder as the web (was 'SupplierPO')
+    SUPPLIER_PO_AMENDMENTS: 'SupplierAmendPOPROD',
+    SPPO: 'SPPOPROD',
+    SPPO_AMENDMENTS: 'SPPOAmendPROD',
+    VENDOR_INVOICES: 'VendorPROD',   // web Supplier Invoice uses VendorPROD; web SP Invoice points at VendorTEST
+    MRR: 'MRRPROD',
     STAFF_DOCUMENTS: 'StaffDocuments',
     LEAVE_ATTACHMENTS: 'LeaveAttachments',
+    COST_CENTER: 'CostCenterPROD',
+    COST_CENTER_BUDGET: 'CostCenterBudgetPROD',
+    LOST_DAMAGED_ITEMS: 'LandDPROD',
+    BAD_DEBT: 'BadDebtPROD',
+    VENDOR_DETAILS: 'VendorDetailsPROD',
+    CAPITAL_SHARE: 'CapitalSharePROD',
+    SHARE_CREATION: 'ShareCreationPROD',
     // Add more folders as needed
 } as const;
 
@@ -49,6 +61,12 @@ export const buildCCBudgetAmendmentUrl = (filePath: string | null | undefined): 
     return buildS3Url(S3_FOLDERS.CC_BUDGET_AMENDMENT, filePath);
 };
 
+export const buildCostCenterDocUrl = (filePath: string | null | undefined): string | null =>
+    buildS3Url(S3_FOLDERS.COST_CENTER, filePath);
+
+export const buildCCBudgetDocUrl = (filePath: string | null | undefined): string | null =>
+    buildS3Url(S3_FOLDERS.COST_CENTER_BUDGET, filePath);
+
 export const buildPurchaseOrderUrl = (filePath: string | null | undefined): string | null => {
     return buildS3Url(S3_FOLDERS.PURCHASE_ORDER, filePath);
 };
@@ -56,6 +74,37 @@ export const buildPurchaseOrderUrl = (filePath: string | null | undefined): stri
 export const buildSupplierPOUrl = (filePath: string | null | undefined): string | null => {
     return buildS3Url(S3_FOLDERS.SUPPLIER_PO, filePath);
 };
+
+export const buildSupplierPOAmendUrl = (filePath: string | null | undefined): string | null =>
+    buildS3Url(S3_FOLDERS.SUPPLIER_PO_AMENDMENTS, filePath);
+
+export const buildSPPOUrl = (filePath: string | null | undefined): string | null =>
+    buildS3Url(S3_FOLDERS.SPPO, filePath);
+
+export const buildSPPOAmendUrl = (filePath: string | null | undefined): string | null =>
+    buildS3Url(S3_FOLDERS.SPPO_AMENDMENTS, filePath);
+
+export const buildVendorInvoiceUrl = (filePath: string | null | undefined): string | null =>
+    buildS3Url(S3_FOLDERS.VENDOR_INVOICES, filePath);
+
+// Client bad debt documents (legacy txtawsdownloadbaddebt)
+export const buildBadDebtUrl = (filePath: string | null | undefined): string | null =>
+    buildS3Url(S3_FOLDERS.BAD_DEBT, filePath);
+
+export const buildCapitalShareUrl = (filePath: string | null | undefined): string | null =>
+    buildS3Url(S3_FOLDERS.CAPITAL_SHARE, filePath);
+
+export const buildShareCreationUrl = (filePath: string | null | undefined): string | null =>
+    buildS3Url(S3_FOLDERS.SHARE_CREATION, filePath);
+
+export const buildVendorDetailsUrl = (filePath: string | null | undefined): string | null =>
+    buildS3Url(S3_FOLDERS.VENDOR_DETAILS, filePath);
+
+export const buildMRRUrl = (filePath: string | null | undefined): string | null =>
+    buildS3Url(S3_FOLDERS.MRR, filePath);
+
+export const buildLostDamagedItemsUrl = (filePath: string | null | undefined): string | null =>
+    buildS3Url(S3_FOLDERS.LOST_DAMAGED_ITEMS, filePath);
 
 export const buildStaffDocumentUrl = (filePath: string | null | undefined): string | null => {
     return buildS3Url(S3_FOLDERS.STAFF_DOCUMENTS, filePath);

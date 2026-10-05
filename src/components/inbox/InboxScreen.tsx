@@ -1,277 +1,194 @@
 // src/components/inbox/InboxScreen.tsx
-import React, { useEffect, useState } from 'react';
-import {
-    ScrollView,
-    RefreshControl,
-    ActivityIndicator,
-    Alert,
-    View,
-    Text,
-    TouchableOpacity,
-
-} from 'react-native';
-import {SafeAreaView} from 'react-native-safe-area-context'
-import { useDispatch, useSelector } from 'react-redux';
-import { CheckCircle, RefreshCw, AlertCircle } from 'lucide-react-native';
-import { useRouter, usePathname } from 'expo-router';
-
-// Import notification actions and selectors
+// Approvals inbox — one row per module waiting on this role (Corex web: components/Inbox).
+// Modules with a mobile verification screen open it; the rest are marked "Web only" until
+// their mobile page is built.
+import React, { useCallback, useState } from 'react';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import { router, useFocusEffect, type Href } from 'expo-router';
+import { AlertCircle, ArrowLeft, CheckCircle, ChevronRight, Inbox, RefreshCw } from 'lucide-react-native';
+import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
 import {
     fetchUserInboxNotifications,
-    selectNotificationsSummary,
-    selectNotificationsLoading,
     selectNotificationsError,
+    selectNotificationsLoading,
+    selectNotificationsSummary,
     selectTotalPendingCount,
     setNotificationFilters,
-    NotificationsSummaryItem,
+    type NotificationsSummaryItem,
 } from '@/src/slice/notifications/inboxNotificationsSlice';
+import { brand } from '@/src/theme/colors';
+import { getNotificationIcon } from './Utils/notificationUtils';
+import { inboxRouteFor } from './inboxRoutes';
 
-// Import custom components
-// Remove this line:
-// import InboxHeader from './Header/InboxHeader';
+const MAX_CC_CHIPS = 4;
 
-// Add this line instead:
-import AppHeader from '../common/AppHeader';
-
-import NotificationSummaryCard from './Card/NotificationSummaryCard';
-import NotificationCard from './Card/NotificationCard';
-
-// Import types
-import type { AppDispatch } from '@/src/store/store';
-
-interface InboxScreenProps {
-    navigation?: any;
-}
-
-const InboxScreen: React.FC<InboxScreenProps> = ({ navigation }) => {
-    const dispatch = useDispatch<AppDispatch>();
-
-    const router = useRouter();
-
-    // Redux selectors
-    const notificationsSummary = useSelector(selectNotificationsSummary);
-    const isLoading = useSelector(selectNotificationsLoading);
-    const error = useSelector(selectNotificationsError);
-    const totalPendingCount = useSelector(selectTotalPendingCount);
-
-    // Get user data from auth slice
-    const userData = useSelector((state: any) => state.auth.userData);
-    const roleId = useSelector((state: any) => state.auth.roleId);
-
-    // Local state
-    const [refreshing, setRefreshing] = useState(false);
-
-    // Load notifications on mount
-    useEffect(() => {
-        loadNotifications();
-    }, [userData, roleId]);
-
-    const loadNotifications = async () => {
-        if (!userData || !roleId) {
-            console.warn('User data or roleId not available');
-            return;
-        }
-
-        try {
-            console.log('Loading notifications for:', {
-                userId: userData.uid || userData.employeeId,
-                roleId
-            });
-
-            // Set filters
-            dispatch(setNotificationFilters({
-                userId: userData.uid || userData.employeeId,
-                roleId: roleId
-            }));
-
-            // Fetch notifications
-            await dispatch(fetchUserInboxNotifications({
-                userId: userData.uid || userData.employeeId,
-                roleId: roleId
-            })).unwrap();
-
-            console.log('Notifications loaded successfully');
-        } catch (error: any) {
-            console.error('Failed to load notifications:', error);
-            Alert.alert(
-                'Error',
-                error || 'Failed to load notifications. Please try again.',
-                [
-                    { text: 'Retry', onPress: () => loadNotifications() },
-                    { text: 'Cancel', style: 'cancel' }
-                ]
-            );
-        }
-    };
-
-    const onRefresh = async () => {
-        setRefreshing(true);
-        try {
-            await loadNotifications();
-        } finally {
-            setRefreshing(false);
-        }
-    };
-
-    // Add this function to your InboxScreen.tsx
-
-    const handleNotificationPress = (item: NotificationsSummaryItem) => {
-        console.log('📱 Notification pressed:', item.ModuleDisplayName);
-
-        const moduleName = item.ModuleDisplayName?.toLowerCase() || '';
-
-        // Budget amendments
-        if (moduleName.includes('cost center budget amend') || moduleName.includes('cc amend')) {
-            router.push('/(inbox)/verification/cc-budget/list');
-        }
-        //
-       else if (moduleName.includes('indent') || moduleName.includes('procurement')) {
-            router.push('/(inbox)/verification/indent/list');
-        }
-        else if (moduleName.includes('account head amend')|| moduleName.includes('dca amend')){
-            router.push('/(inbox)/verification/dca-budget/list');
-        }
-
-        // Purchase Orders
-
-        // Supplier Invoice
-
-        // Cost Center
-
-        // Generic fallback
-        else {
-            Alert.alert(
-                'Coming Soon',
-                `${item.ModuleDisplayName} verification will be available soon.`
-            );
-        }
-    };
-    const renderEmptyState = () => (
-        <View className="flex-1 items-center justify-center px-8 mt-20">
-            <CheckCircle size={64} color="#22c55e" />
-            <Text className="text-gray-900 text-xl font-semibold mt-4 text-center">
-                All Caught Up!
-            </Text>
-            <Text className="text-gray-500 text-base mt-2 text-center">
-                You have no pending notifications at the moment.
-            </Text>
-            <TouchableOpacity
-                onPress={loadNotifications}
-                className="bg-blue-500 px-6 py-3 rounded-lg mt-6"
-            >
-                <View className="flex-row items-center">
-                    <RefreshCw size={16} color="#fff" />
-                    <Text className="text-white font-medium ml-2">Refresh</Text>
-                </View>
-            </TouchableOpacity>
-        </View>
-    );
-
-    const renderLoadingState = () => (
-        <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color="#3b82f6" />
-            <Text className="text-gray-500 mt-4">Loading notifications...</Text>
-        </View>
-    );
-
-    const renderNotUserLoggedInState = () => (
-        <View className="flex-1 items-center justify-center px-8">
-            <AlertCircle size={64} color="#ef4444" />
-            <Text className="text-gray-900 text-xl font-semibold mt-4 text-center">
-                Authentication Required
-            </Text>
-            <Text className="text-gray-500 text-base mt-2 text-center">
-                Please login to view your notifications.
-            </Text>
-        </View>
-    );
-
-    // Show loading state for initial load
-    if (isLoading && notificationsSummary.length === 0) {
-        return (
-            <SafeAreaView className="flex-1 bg-gray-50">
-                <AppHeader
-                    title="Inbox"
-                    showBackButton={true}
-                    showRefreshButton={true}
-                    isLoading={isLoading}
-                    onRefresh={loadNotifications}
-                />
-                {renderLoadingState()}
-            </SafeAreaView>
-        );
-    }
-
-    // Show auth required state
-    if (!userData || !roleId) {
-        return (
-            <SafeAreaView className="flex-1 bg-gray-50">
-                <AppHeader
-                    title="Inbox"
-                    showBackButton={true}
-                    showRefreshButton={false}
-                />
-                {renderNotUserLoggedInState()}
-            </SafeAreaView>
-        );
-    }
+const ModuleRow = ({ item, onPress }: { item: NotificationsSummaryItem; onPress: () => void }) => {
+    const supported = !!inboxRouteFor(item);
+    const icon = React.createElement(getNotificationIcon(item.ModuleDisplayName || '', item.ModuleCategory || ''), {
+        size: 18,
+        color: supported ? brand.orangeLight : '#9ca3af',
+    });
+    const extraCCs = (item.CCCodes?.length || 0) - MAX_CC_CHIPS;
 
     return (
-        <SafeAreaView className="flex-1 bg-gray-50">
-            {/* Replace InboxHeader with AppHeader */}
-            <AppHeader
-                title="Inbox"
-                showBackButton={true}
-                showRefreshButton={true}
-                isLoading={isLoading}
-                onRefresh={loadNotifications}
-            />
-
-            {/* Content */}
-            <ScrollView
-                showsVerticalScrollIndicator={false}
-                refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={onRefresh}
-                        colors={['#3b82f6']}
-                        tintColor="#3b82f6"
-                    />
-                }
-            >
-                {/* Summary Header Card */}
-                <NotificationSummaryCard totalPendingCount={totalPendingCount} />
-
-                {/* Notifications List */}
-                {notificationsSummary.length === 0 ? (
-                    renderEmptyState()
-                ) : (
-                    <View className="pb-20">
-                        {notificationsSummary.map((item: NotificationsSummaryItem, index: number) => (
-                            <NotificationCard
-                                key={`${item.MasterId}-${index}`}
-                                item={item}
-                                onPress={() => handleNotificationPress(item)}
-                            />
-                        ))}
+        <TouchableOpacity
+            onPress={onPress}
+            activeOpacity={0.8}
+            className={`bg-white rounded-2xl border p-4 mb-3 ${supported ? 'border-gray-200' : 'border-dashed border-gray-300'}`}
+        >
+            <View className="flex-row items-center gap-3">
+                <View className={`w-10 h-10 rounded-xl items-center justify-center ${supported ? 'bg-brand-navy' : 'bg-gray-100'}`}>
+                    {icon}
+                </View>
+                <View className="flex-1">
+                    <Text className={`text-sm font-semibold ${supported ? 'text-gray-900' : 'text-gray-600'}`} numberOfLines={2}>
+                        {item.ModuleDisplayName}
+                    </Text>
+                    {item.ModuleCategory ? (
+                        <Text className="text-[11px] text-gray-400 mt-0.5" numberOfLines={1}>{item.ModuleCategory}</Text>
+                    ) : null}
+                </View>
+                <View className="items-end gap-1">
+                    <View className={`min-w-[28px] h-7 px-2 rounded-full items-center justify-center ${supported ? 'bg-orange-500' : 'bg-gray-300'}`}>
+                        <Text className="text-xs font-bold text-white">{item.TotalPendingCount}</Text>
                     </View>
-                )}
-            </ScrollView>
+                    {!supported && <Text className="text-[10px] font-semibold text-gray-400">Web only</Text>}
+                </View>
+                {supported && <ChevronRight size={16} color={brand.orange} />}
+            </View>
 
-            {/* Error State */}
-            {error && (
-                <View className="absolute bottom-20 left-4 right-4 bg-red-50 border border-red-200 rounded-lg p-4">
-                    <View className="flex-row items-center">
-                        <AlertCircle size={20} color="#ef4444" />
-                        <Text className="text-red-800 ml-2 flex-1">{error}</Text>
-                        <TouchableOpacity onPress={loadNotifications}>
-                            <Text className="text-red-600 font-medium">Retry</Text>
-                        </TouchableOpacity>
-                    </View>
+            {item.CCCodes?.length > 0 && (
+                <View className="flex-row flex-wrap gap-1.5 mt-3 pt-3 border-t border-gray-100">
+                    {item.CCCodes.slice(0, MAX_CC_CHIPS).map((cc) => (
+                        <View key={cc} className="px-2 py-0.5 rounded-md bg-indigo-50">
+                            <Text className="text-[11px] font-medium text-brand-navy">{cc}</Text>
+                        </View>
+                    ))}
+                    {extraCCs > 0 && (
+                        <View className="px-2 py-0.5 rounded-md bg-gray-100">
+                            <Text className="text-[11px] font-medium text-gray-500">+{extraCCs} more</Text>
+                        </View>
+                    )}
                 </View>
             )}
-        </SafeAreaView>
+        </TouchableOpacity>
     );
 };
 
-export default InboxScreen;
+export default function InboxScreen() {
+    const dispatch = useAppDispatch();
+    const summary: NotificationsSummaryItem[] = useAppSelector(selectNotificationsSummary);
+    const loading = useAppSelector(selectNotificationsLoading);
+    const error = useAppSelector(selectNotificationsError);
+    const totalPending = useAppSelector(selectTotalPendingCount);
+    const userData = useAppSelector((state) => state.auth.userData);
+    const roleId = useAppSelector((state) => state.auth.roleId);
+
+    const [refreshing, setRefreshing] = useState(false);
+    const userId = userData?.uid || userData?.employeeId;
+
+    const load = useCallback(async () => {
+        if (!userId || !roleId) return;
+        dispatch(setNotificationFilters({ userId, roleId }));
+        await dispatch(fetchUserInboxNotifications({ userId, roleId }));
+    }, [dispatch, userId, roleId]);
+
+    // Reload every time the inbox is shown, so counts drop after verifying an item
+    useFocusEffect(
+        useCallback(() => {
+            load();
+        }, [load]),
+    );
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await load();
+        setRefreshing(false);
+    };
+
+    const openModule = (item: NotificationsSummaryItem) => {
+        const route = inboxRouteFor(item);
+        if (route) {
+            router.push(route.href as Href);
+        } else {
+            Alert.alert(
+                'Not on mobile yet',
+                `${item.ModuleDisplayName} verification isn't available in the app yet. Please verify it from the Corex web app for now.`,
+            );
+        }
+    };
+
+    // Modules the app can open first, then web-only ones
+    const sorted = [...summary].sort((a, b) => Number(!!inboxRouteFor(b)) - Number(!!inboxRouteFor(a)));
+    const mobileCount = summary.filter((s) => inboxRouteFor(s)).length;
+
+    return (
+        <SafeAreaView className="flex-1 bg-brand-navy" edges={['top']}>
+            <StatusBar style="light" />
+
+            {/* Header */}
+            <View className="flex-row items-center gap-3 px-4 pt-2 pb-4 bg-brand-navy">
+                <TouchableOpacity
+                    onPress={() => (router.canGoBack() ? router.back() : router.replace('/role-dashboard'))}
+                    className="p-2 -ml-1 rounded-lg bg-white/10"
+                    hitSlop={6}
+                >
+                    <ArrowLeft size={20} color="#ffffff" />
+                </TouchableOpacity>
+                <View className="flex-1">
+                    <Text className="text-white text-base font-bold">Approvals Inbox</Text>
+                    <Text className="text-orange-300 text-[11px]">{userData?.roleCode || 'Pending verification'}</Text>
+                </View>
+                <TouchableOpacity onPress={load} disabled={loading} className="p-2 rounded-lg bg-white/10">
+                    <RefreshCw size={18} color={loading ? brand.orangeLight : '#ffffff'} />
+                </TouchableOpacity>
+            </View>
+
+            <ScrollView
+                className="flex-1 bg-gray-50"
+                contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={brand.orange} colors={[brand.orange]} />}
+            >
+                {/* Summary */}
+                <View className="flex-row items-center gap-4 bg-white rounded-2xl border border-orange-200 p-4 mb-4">
+                    <View className="w-12 h-12 rounded-xl bg-orange-50 items-center justify-center">
+                        <Inbox size={22} color={brand.orange} />
+                    </View>
+                    <View className="flex-1">
+                        <Text className="text-2xl font-bold text-gray-900">{totalPending}</Text>
+                        <Text className="text-xs text-gray-500">
+                            item{totalPending === 1 ? '' : 's'} across {summary.length} module{summary.length === 1 ? '' : 's'}
+                            {summary.length > 0 ? ` · ${mobileCount} on mobile` : ''}
+                        </Text>
+                    </View>
+                </View>
+
+                {error ? (
+                    <View className="flex-row items-center gap-2 bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
+                        <AlertCircle size={18} color="#ef4444" />
+                        <Text className="flex-1 text-xs text-red-700">{String(error)}</Text>
+                        <TouchableOpacity onPress={load}>
+                            <Text className="text-xs font-semibold text-red-600">Retry</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : null}
+
+                {loading && summary.length === 0 ? (
+                    <Text className="text-sm text-gray-400 text-center py-16">Loading inbox…</Text>
+                ) : summary.length === 0 ? (
+                    <View className="items-center py-16 px-6">
+                        <CheckCircle size={56} color="#22c55e" />
+                        <Text className="text-lg font-semibold text-gray-900 mt-4">All caught up!</Text>
+                        <Text className="text-sm text-gray-500 mt-1 text-center">Nothing is waiting for your verification.</Text>
+                    </View>
+                ) : (
+                    sorted.map((item) => (
+                        <ModuleRow key={`${item.MasterId}_${item.ModuleDisplayName}`} item={item} onPress={() => openModule(item)} />
+                    ))
+                )}
+            </ScrollView>
+        </SafeAreaView>
+    );
+}

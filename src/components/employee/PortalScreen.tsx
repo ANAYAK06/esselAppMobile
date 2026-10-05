@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, RefreshControl, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { brand } from '@/src/theme/colors';
@@ -15,10 +15,11 @@ type Props = {
     icon: LucideIcon;
     onRefresh?: () => Promise<unknown> | void;
     headerAction?: React.ReactNode;
+    backHref?: Href; // where back goes when there is no history (default: employee dashboard)
     children: React.ReactNode;
 };
 
-export default function PortalScreen({ title, subtitle, icon: Icon, onRefresh, headerAction, children }: Props) {
+export default function PortalScreen({ title, subtitle, icon: Icon, onRefresh, headerAction, backHref, children }: Props) {
     const [refreshing, setRefreshing] = useState(false);
 
     const handleRefresh = async () => {
@@ -31,7 +32,7 @@ export default function PortalScreen({ title, subtitle, icon: Icon, onRefresh, h
         }
     };
 
-    const goBack = () => (router.canGoBack() ? router.back() : router.replace('/(dashboard)/employee-dashboard'));
+    const goBack = () => (router.canGoBack() ? router.back() : router.replace(backHref ?? '/(dashboard)/employee-dashboard'));
 
     return (
         <SafeAreaView className="flex-1 bg-brand-navy" edges={['top']}>

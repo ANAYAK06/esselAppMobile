@@ -77,8 +77,9 @@ export const fetchUserInboxNotifications = createAsyncThunk<
             console.log('📬 Response.Data:', response.Data);
             console.log('📬 IsSuccessful:', response.IsSuccessful);
 
-            // Check if the API call was successful
-            if (response.IsSuccessful && response.Data) {
+            // Accept the list whenever Data is an array — this backend sometimes answers
+            // IsSuccessful:false alongside valid data (see the web's userInboxNotificationSlice)
+            if (Array.isArray(response?.Data)) {
                 console.log('✅ Notifications fetch successful');
                 return response.Data;
             } else {
@@ -105,7 +106,9 @@ export const fetchUserInboxNotifications = createAsyncThunk<
 const createNotificationsSummary = (notifications: NotificationItem[]): NotificationsSummaryItem[] => {
     if (!notifications || !Array.isArray(notifications)) return [];
 
-    // Group by masterId only (since userId and roleId are already filtered via API params)
+    // Group by MasterId + ModuleDisplayName, same as the web. MasterId alone is not unique per
+    // feature: the backend reuses the same WorkFlowLevelId as MasterId across unrelated features
+    // (e.g. MRR and Multi MRR), so grouping by it merged different modules into one row.
     const groupedNotifications = notifications.reduce((acc, notification) => {
         const {
             MasterId,
@@ -122,8 +125,7 @@ const createNotificationsSummary = (notifications: NotificationItem[]): Notifica
             AssignedUserId
         } = notification;
 
-        // Create grouping key using only masterId
-        const groupKey = `${MasterId}`;
+        const groupKey = `${MasterId}_${ModuleDisplayName}`;
 
         if (!acc[groupKey]) {
             acc[groupKey] = {

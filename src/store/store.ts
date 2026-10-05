@@ -6,12 +6,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Import auth slice
 import authReducer from '../slice/auth/authSlice';
 import inboxNotificationReducer from '../slice/notifications/inboxNotificationsSlice'
-import ccBudgetAmendmentReducer from '@/src/slice/budget/ccBudgetAmendmentSlice'
-import remarksReducer from '@/src/slice/common/remarksSlice';
-import statusReducer from '@/src/slice/common/statusSlice'
-import indentReducer from '@/src/slice/indent/indentSlice'
-import dcaAmendmentReducer from '@/src/slice/budget/dcaBudgetAmendmentSlice'
 import employeePortalReducer from '@/src/slice/hr/employeePortalSlice'
+import rejectionAlertsReducer from '@/src/slice/notifications/rejectionAlertsSlice'
 // Configure Redux Persist
 const persistConfig = {
     key: 'root',
@@ -25,12 +21,8 @@ const persistConfig = {
 const rootReducer = combineReducers({
     auth: authReducer,
     inboxnotifications:inboxNotificationReducer,
-    ccBudgetAmendment:ccBudgetAmendmentReducer,
-    remarks: remarksReducer,
-    status: statusReducer,
-    indent: indentReducer,
-    dcaBudgetAmendment:dcaAmendmentReducer,
     employeePortal: employeePortalReducer,
+    rejectionAlerts: rejectionAlertsReducer,
 
 
 });
