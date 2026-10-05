@@ -39,7 +39,7 @@ export const todayLabel = () =>
 
 // ---- Welcome -----------------------------------------------------------------------------
 
-export const WelcomeCard = ({ name, roleCode, department }: { name?: string; roleCode?: string; department?: string }) => (
+export const WelcomeCard = ({ name, roleCode }: { name?: string; roleCode?: string }) => (
     <LinearGradient
         colors={[brand.navy, brand.navyDark]}
         start={{ x: 0, y: 0 }}
@@ -48,13 +48,6 @@ export const WelcomeCard = ({ name, roleCode, department }: { name?: string; rol
     >
         <Text className="text-xl font-bold text-white">Welcome Back{name ? `, ${name}` : ''}!</Text>
         <Text className="text-sm text-orange-200 mt-1">Role: {roleCode || '—'}</Text>
-        {department ? (
-            <View className="flex-row mt-3">
-                <View className="px-2.5 py-1 rounded-full bg-white/10 border border-orange-400/30">
-                    <Text className="text-[11px] font-semibold text-orange-300">{department} dashboard</Text>
-                </View>
-            </View>
-        ) : null}
     </LinearGradient>
 );
 

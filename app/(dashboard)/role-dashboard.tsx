@@ -97,11 +97,7 @@ export default function RoleDashboard() {
                         <RefreshControl refreshing={false} onRefresh={onRefresh} tintColor={brand.orange} colors={[brand.orange]} />
                     }
                 >
-                    <WelcomeCard
-                        name={userData?.firstName?.trim()}
-                        roleCode={userData?.roleCode}
-                        department={department.loading ? undefined : DASHBOARDS[code].name}
-                    />
+                    <WelcomeCard name={userData?.firstName?.trim()} roleCode={userData?.roleCode} />
 
                     <InboxCard />
 
