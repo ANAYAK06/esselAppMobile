@@ -28,6 +28,7 @@ import {
     ActionPanel, DetailHero, FieldGrid, RemarksTimeline, Section, money,
 } from '@/src/components/verification/kit/VerificationKit';
 import { useRowParam, useVerifier } from '@/src/components/verification/kit/useVerifier';
+import { showDone } from '@/src/components/verification/kit/verificationEvents';
 import IndentItemCard, { isAssetItem, n } from '@/src/components/verification/indent/IndentItemCard';
 import StockSummaryBody from '@/src/components/verification/indent/StockSummaryBody';
 import TradeIssueBody from '@/src/components/verification/indent/TradeIssueBody';
@@ -150,7 +151,7 @@ export default function IndentVerificationDetail() {
             const next = act === 'Approve' && totalIssued > 0
                 ? `\n\nNext: issue the stock from ${role === 'CSK' ? 'Old Stock Issue' : 'New Stock Issue'} on the Corex web app.`
                 : '';
-            Alert.alert('Done', `Indent ${DONE[act]} successfully.${next}`, [{ text: 'OK', onPress: () => router.back() }]);
+            showDone(`Indent ${DONE[act]} successfully.${next}`, () => router.back());
         } catch (e: any) {
             Alert.alert('Error', e?.response?.data?.Message || e?.message || `Failed to ${act.toLowerCase()} indent`);
         }

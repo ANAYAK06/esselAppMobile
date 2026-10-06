@@ -11,6 +11,7 @@ import type { LucideIcon } from 'lucide-react-native';
 import { useApiData } from '@/src/hooks/useApiData';
 import { getRemarksHistory, getStatusActions, type RemarkEntry, type StatusAction } from '@/src/api/verification/verificationCommonAPI';
 import { brand } from '@/src/theme/colors';
+import { showDone } from './verificationEvents';
 
 // ---- Formatting --------------------------------------------------------------------------
 
@@ -338,6 +339,7 @@ export const ActionPanel = ({ moid, roleId, chkAmt = 0, showReturn = true, confi
                 multiline
                 textAlignVertical="top"
                 className="min-h-[88px] rounded-xl border border-gray-300 bg-white p-3 text-sm text-gray-900 mb-3"
+                style={{ maxHeight: 160 }} // long notes scroll inside the box, so it stays above the keyboard
             />
 
             {loading ? (
@@ -374,5 +376,5 @@ export const ActionPanel = ({ moid, roleId, chkAmt = 0, showReturn = true, confi
 // Success message after a submit; "$" splits the status from extra info the SP returns
 export const showSubmitResult = (label: string, status: string, onDone: () => void) => {
     const info = status.includes('$') ? status.split('$')[1]?.trim() : '';
-    Alert.alert('Done', `${label}${info ? `\n\n${info}` : ''}`, [{ text: 'OK', onPress: onDone }]);
+    showDone(`${label}${info ? `\n\n${info}` : ''}`, onDone);
 };

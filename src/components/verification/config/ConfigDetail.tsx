@@ -17,6 +17,7 @@ import {
     ActionPanel, DetailHero, FieldGrid, Notice, RemarksTimeline, Section, type Field,
 } from '@/src/components/verification/kit/VerificationKit';
 import { useRowParam, useVerifier } from '@/src/components/verification/kit/useVerifier';
+import { showDone } from '@/src/components/verification/kit/verificationEvents';
 import { VERIFICATION_CONFIGS } from './configs';
 import { isOk, routeOf, type Ctx, type Rec, type ResubmitField, type VerificationConfig } from './types';
 
@@ -90,7 +91,7 @@ export default function ConfigDetail() {
     const title = config.title.replace(/ Verification$/, '');
     const backHref = { pathname: '/verification/config/[key]/list', params: { key, path, category } } as unknown as Href;
     const done = (label: string, extra?: string | void) =>
-        Alert.alert('Done', `${config.successLabel || title} ${label}${extra ? `\n\n${extra}` : ''}`, [{ text: 'OK', onPress: () => router.back() }]);
+        showDone(`${config.successLabel || title} ${label}${extra ? `\n\n${extra}` : ''}`, () => router.back());
 
     const submit = async (action: StatusAction, note: string) => {
         if (!row || !record) return;
@@ -243,7 +244,7 @@ export default function ConfigDetail() {
                     ) : config.actions ? (
                         config.actions(row, record, {
                             aux, ext, setExt, openSheet, reload, roleId, userId: uid, user: userName,
-                            done: (message) => Alert.alert('Done', message, [{ text: 'OK', onPress: () => router.back() }]),
+                            done: (message) => showDone(message, () => router.back()),
                         })
                     ) : (
                         <ActionPanel

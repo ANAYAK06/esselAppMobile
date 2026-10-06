@@ -16,6 +16,7 @@ import {
 } from '@/src/api/verification/budgetVerificationAPI';
 import { brand } from '@/src/theme/colors';
 import { FieldGrid, Section, money } from '../kit/VerificationKit';
+import { showDone } from '../kit/verificationEvents';
 
 type HeadValue = { amount: string; checked: boolean };
 
@@ -71,7 +72,7 @@ export default function DCABudgetResubmit({ row, detail: d, roleId, userName, on
                 RoleId: roleId,
                 UCreatedBy: userName,
             });
-            if (status === 'Updated') Alert.alert('Done', 'Account head budget updated successfully', [{ text: 'OK', onPress: onDone }]);
+            if (status === 'Updated') showDone('Account head budget updated successfully', onDone);
             else Alert.alert('Not updated', status || 'The server returned no confirmation.');
         } catch (e: any) {
             Alert.alert('Error', e?.response?.data?.Message || e?.message || 'Failed to update');

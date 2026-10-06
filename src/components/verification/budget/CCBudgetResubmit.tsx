@@ -16,6 +16,7 @@ import { uploadFileToS3 } from '@/src/api/verification/verificationCommonAPI';
 import { S3_FOLDERS } from '@/src/service/s3Config';
 import { brand } from '@/src/theme/colors';
 import { FieldGrid, Section } from '../kit/VerificationKit';
+import { showDone } from '../kit/verificationEvents';
 
 type Picked = { uri: string; name: string; mimeType?: string };
 
@@ -81,7 +82,7 @@ export default function CCBudgetResubmit({ detail: d, roleId, userName, onDone }
                     return;
                 }
             }
-            Alert.alert('Done', 'Budget updated successfully', [{ text: 'OK', onPress: onDone }]);
+            showDone('Budget updated successfully', onDone);
         } catch (e: any) {
             Alert.alert('Error', e?.response?.data?.Message || e?.message || 'Failed to update');
         } finally {

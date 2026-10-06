@@ -19,6 +19,7 @@ import {
     ActionPanel, DetailHero, FieldGrid, Notice, RemarksTimeline, Section, money,
 } from '@/src/components/verification/kit/VerificationKit';
 import { useRowParam, useVerifier } from '@/src/components/verification/kit/useVerifier';
+import { showDone } from '@/src/components/verification/kit/verificationEvents';
 
 const num = (v: unknown) => parseFloat(String(v ?? 0)) || 0;
 const qty = (v: unknown) => num(v).toFixed(2);
@@ -63,7 +64,7 @@ export default function IndentAmendDetail() {
                 Alert.alert('Not applied', status);
                 return;
             }
-            Alert.alert('Done', `Indent amend ${DONE[action.type] || `${act}d`} successfully.`, [{ text: 'OK', onPress: () => router.back() }]);
+            showDone(`Indent amend ${DONE[action.type] || `${act}d`} successfully.`, () => router.back());
         } catch (e: any) {
             Alert.alert('Error', e?.response?.data?.Message || e?.message || 'Failed to submit verification');
         }

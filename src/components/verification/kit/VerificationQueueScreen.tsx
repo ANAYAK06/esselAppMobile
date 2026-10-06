@@ -1,6 +1,7 @@
 // Queue (list) screen shared by every verification: header, count, search, one card per row.
-// Reloads each time it comes into focus, so an item disappears after it is verified.
-import React, { useCallback, useState } from 'react';
+// A record actioned on its detail screen is hidden at once (verificationEvents) and the list
+// reloads; it also reloads each time it comes back into focus.
+import React, { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useFocusEffect, type Href } from 'expo-router';
 import { CheckCircle } from 'lucide-react-native';
@@ -10,6 +11,7 @@ import { EmptyState, LoadingText, SearchInput } from '@/src/components/employee/
 import { useApiData } from '@/src/hooks/useApiData';
 import { QueueCard, QueueSummary } from './VerificationKit';
 import { useVerifier } from './useVerifier';
+import { onVerified } from './verificationEvents';
 
 type CardProps = Omit<React.ComponentProps<typeof QueueCard>, 'onPress'>;
 
@@ -31,11 +33,19 @@ export default function VerificationQueueScreen<T>({ title, icon, noun, searchPl
     const [reloadKey, setReloadKey] = useState(0);
     const [query, setQuery] = useState('');
 
+    const [done, setDone] = useState<ReadonlySet<string>>(() => new Set());
+
     useFocusEffect(useCallback(() => setReloadKey((k) => k + 1), []));
+
+    useEffect(() => onVerified((row) => {
+        if (row) setDone((prev) => new Set(prev).add(keyOf(row as T)));
+        setReloadKey((k) => k + 1);
+    }), [keyOf]);
 
     const loader = useCallback(() => load(roleId, uid, userName), [load, roleId, uid, userName, reloadKey]); // eslint-disable-line react-hooks/exhaustive-deps
     const { data, loading, error } = useApiData(roleId ? loader : null);
-    const rows = data ?? [];
+    // Kept hidden even if a reload still returns it (the server can lag behind the action)
+    const rows = (data ?? []).filter((r) => !done.has(keyOf(r)));
 
     const q = query.trim().toLowerCase();
     const shown = q ? rows.filter((r) => searchText(r).toLowerCase().includes(q)) : rows;
