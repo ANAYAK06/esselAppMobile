@@ -72,6 +72,7 @@ export interface SupplierPODetail {
     Contact?: string;
     SiteMobileNo?: string;
     FilePath?: string;               // QCS (quotation comparison sheet)
+    LCApplicable?: string;           // 'Yes' / 'No', chosen at PO creation
     Remarks?: string;                // PO terms, "|"-separated
     ApprovedUser?: string;           // approval comments so far, "||"-separated
     PriceChangeAccess?: string;

@@ -190,6 +190,7 @@ export default function SupplierPODetailScreen() {
                                 ['PO Date', d.PODate],
                                 ['Ref No', d.RefNo],
                                 ['Cost Center', d.CCCode],
+                                !!d.LCApplicable && ['LC Applicable', d.LCApplicable],
                                 ['Vendor', d.VendorName, true],
                                 !!d.VendorGST && ['Vendor GST', d.VendorGST],
                                 !!d.VendorAddress && ['Vendor Address', d.VendorAddress, true],
