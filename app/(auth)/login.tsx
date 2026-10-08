@@ -1,20 +1,22 @@
-// app/(auth)/login.tsx - Clean Login Screen (Password Only)
-import React, { useState, useEffect } from 'react';
+// app/(auth)/login.tsx - Login Screen (Corex brand: white brand panel + navy form panel,
+// stacked version of the web login's two-column card)
+import React, { useEffect, useRef, useState } from 'react';
 import {
     View,
     Text,
-    TextInput,
+    Image,
     TouchableOpacity,
     KeyboardAvoidingView,
     ScrollView,
     Platform,
     ActivityIndicator,
-    Alert
+    Alert,
+    Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter, type Href } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Eye, EyeOff, User, Lock, Building2 } from 'lucide-react-native';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 
@@ -24,8 +26,18 @@ import {
     validateEmployee,
     clearErrors,
     clearSuccess,
-    loadFromStorage
+    loadFromStorage,
+    logout
 } from '@/src/slice/auth/authSlice';
+
+import BrandInput from '@/src/components/auth/BrandInput';
+import BottomSheet from '@/src/components/auth/BottomSheet';
+import LoginOptionsSheet from '@/src/components/auth/LoginOptionsSheet';
+import QuickLoginPanel from '@/src/components/auth/QuickLoginPanel';
+import QuickLoginSetupSheet from '@/src/components/auth/QuickLoginSetupSheet';
+import * as quickLogin from '@/src/service/quickLogin';
+import type { QuickLoginInfo } from '@/src/service/quickLogin';
+import { brand } from '@/src/theme/colors';
 
 // Validation Schema
 const validationSchema = Yup.object({
@@ -40,23 +52,44 @@ const validationSchema = Yup.object({
 export default function LoginScreen() {
     const router = useRouter();
     const dispatch = useAppDispatch();
-    const [showPassword, setShowPassword] = useState(false);
-    const [focusedField, setFocusedField] = useState('');
 
     // Auth Redux state
     const {
         loading,
-        errors,
         success,
         isAuthenticated,
-        loginType
+        employeeValidated,
+        loginType,
+        employeeId,
+        employeeData,
+        userData
     } = useAuth();
+
+    // Quick login (PIN / biometric) saved on this phone: undefined while loading, null when none
+    const [quick, setQuick] = useState<QuickLoginInfo | null | undefined>(undefined);
+    const [usePassword, setUsePassword] = useState(false);
+    // Credentials of a password login that may be turned into a quick login (setup sheet)
+    const [pendingSetup, setPendingSetup] = useState<{ employeeId: string; password: string } | null>(null);
+    // Portal chosen in the sheet: hide the sheet first and navigate once it is fully gone —
+    // replacing the screen while the Modal is still up freezes iOS (invisible layer eats touches)
+    const [leavingTo, setLeavingTo] = useState<Href | null>(null);
+    const sheetShownRef = useRef(false);
+
+    // Employee ID + password accepted, but no portal chosen yet → one bottom sheet showing the
+    // quick-login setup first (after a password login only), then the Employee / Role options
+    const awaitingPortalChoice = isAuthenticated && employeeValidated && !loginType;
 
     // Check for existing session on mount
     useEffect(() => {
         console.log('🔄 Login screen mounted - checking session');
         dispatch(loadFromStorage());
+        quickLogin.getQuickLogin().then(setQuick);
     }, [dispatch]);
+
+    const showLoginError = (message: unknown) => {
+        Alert.alert('Login Error', typeof message === 'string' ? message : 'Employee validation failed');
+        dispatch(clearErrors());
+    };
 
     // Formik setup for login
     const formik = useFormik({
@@ -66,55 +99,96 @@ export default function LoginScreen() {
         },
         validationSchema,
         onSubmit: async (values) => {
-            console.log('Login attempt:', values);
+            console.log('Login attempt:', values.employeeId);
             const credentials = {
-                employeeId: values.employeeId,
+                employeeId: values.employeeId.trim(),
                 password: values.password
             };
-            dispatch(validateEmployee(credentials));
+            // Decide on the quick-login offer BEFORE validating, so the sheet opens straight on the
+            // right content instead of switching from the options to the setup sheet.
+            const hasQuickLogin = quick?.employeeId === credentials.employeeId;
+            const offerSetup = !hasQuickLogin && !(await quickLogin.isDeclined(credentials.employeeId));
+            if (offerSetup) setPendingSetup(credentials);
+
+            const result = await dispatch(validateEmployee(credentials));
+            if (!validateEmployee.fulfilled.match(result)) {
+                setPendingSetup(null);
+                showLoginError(result.payload);
+                return;
+            }
+
+            // Keep an existing quick login's password current (e.g. after a password change)
+            if (hasQuickLogin) {
+                await quickLogin.updateSavedPassword(credentials.employeeId, credentials.password);
+            }
         }
     });
 
-    // Handle success states
+    const switchToPassword = () => {
+        setUsePassword(true);
+        if (quick) formik.setFieldValue('employeeId', quick.employeeId);
+    };
+
+    // PIN / biometric unlocked the saved password → sign in exactly like a password login
+    const signInWithQuickLogin = async (password: string) => {
+        if (!quick) return;
+        const result = await dispatch(validateEmployee({ employeeId: quick.employeeId, password }));
+        if (!validateEmployee.fulfilled.match(result)) {
+            dispatch(clearErrors());
+            Alert.alert(
+                'Could not sign in',
+                `${typeof result.payload === 'string' ? result.payload : 'Sign in failed'}\n\n` +
+                'If you changed your password recently, sign in with the new password — ' +
+                'your PIN will keep working afterwards.'
+            );
+            switchToPassword();
+        }
+    };
+
+    const forgetQuickLogin = async () => {
+        await quickLogin.clearQuickLogin();
+        setQuick(null);
+        setUsePassword(false);
+    };
+
+    // Handle success states — a validated employee picks Employee / Role in the options sheet below
     useEffect(() => {
         if (success.validateEmployee) {
             console.log('✅ Employee validation successful');
             dispatch(clearSuccess());
-            router.push('/login-options');
         }
-    }, [success.validateEmployee, dispatch, router]);
+    }, [success.validateEmployee, dispatch]);
 
+    // Portal chosen: remember the name for the quick-login "Welcome back" greeting
+    // (navigation happens in the redirect effect below)
     useEffect(() => {
         if (success.getEmployeeDetails) {
+            quickLogin.setDisplayName(employeeId, employeeData?.Firstname);
             dispatch(clearSuccess());
-            router.replace('/employee-dashboard');
         }
-    }, [success.getEmployeeDetails, dispatch, router]);
+    }, [success.getEmployeeDetails, dispatch, employeeId, employeeData]);
 
     useEffect(() => {
         if (success.getMenu) {
+            quickLogin.setDisplayName(employeeId, userData?.firstName);
             dispatch(clearSuccess());
-            router.replace('/role-dashboard');
         }
-    }, [success.getMenu, dispatch, router]);
+    }, [success.getMenu, dispatch, employeeId, userData]);
 
-    // Handle error states
     useEffect(() => {
-        if (errors.validateEmployee) {
-            Alert.alert('Login Error', errors.validateEmployee);
-            dispatch(clearErrors());
-        }
-    }, [errors.validateEmployee, dispatch]);
+        if (awaitingPortalChoice) sheetShownRef.current = true;
+    }, [awaitingPortalChoice]);
 
-    // Redirect if already authenticated
+    // Redirect once authenticated: straight away for a restored session, after the sheet has
+    // closed when the portal was picked in it
     useEffect(() => {
-        if (isAuthenticated && loginType) {
+        if (!isAuthenticated || !loginType) return;
+        const target: Href = loginType === 'employee' ? '/employee-dashboard' : '/role-dashboard';
+        if (sheetShownRef.current) {
+            setLeavingTo(target);
+        } else {
             console.log('✅ Valid session found - redirecting to dashboard');
-            if (loginType === 'employee') {
-                router.replace('/employee-dashboard');
-            } else if (loginType === 'role') {
-                router.replace('/role-dashboard');
-            }
+            router.replace(target);
         }
     }, [isAuthenticated, loginType, router]);
 
@@ -125,275 +199,196 @@ export default function LoginScreen() {
         }
     }, [formik.touched, dispatch]);
 
-    return (
-        <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={{ flex: 1 }}
-        >
-            <StatusBar style="light" />
+    const submitting = loading.validateEmployee;
+    const submitDisabled = submitting || !formik.isValid || !formik.dirty;
 
-            {/* Gradient Background */}
-            <LinearGradient
-                colors={['#667eea', '#764ba2', '#4f46e5']}
+    const portalLoading = loading.getEmployeeDetails || loading.validateUser || loading.getMenu;
+    const showQuickLoginPanel = !!quick && !usePassword;
+
+    // Cancelling the sheet drops the half-finished login (same as the old options screen's back button)
+    const cancelLoginOptions = () => {
+        dispatch(logout());
+        dispatch(clearErrors());
+        dispatch(clearSuccess());
+        formik.setFieldValue('password', '');
+        setPendingSetup(null);
+        sheetShownRef.current = false;
+        // A quick login set up just now should be used from the next sign-in on
+        quickLogin.getQuickLogin().then(setQuick);
+    };
+
+    return (
+        <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+            <StatusBar style="dark" />
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={{ flex: 1 }}
             >
-                {/* Background Overlay */}
-                <View
-                    style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
-                    }}
-                />
-
-                {/* Background Pattern */}
-                <View className="absolute inset-0 opacity-10">
-                    <View
-                        className="absolute top-20 right-10 w-32 h-32 border border-white rounded-full"
-                        style={{ borderColor: 'rgba(255,255,255,0.2)' }}
-                    />
-                    <View
-                        className="absolute bottom-40 left-10 w-24 h-24 border border-white"
-                        style={{
-                            borderColor: 'rgba(255,255,255,0.15)',
-                            transform: [{ rotate: '45deg' }]
-                        }}
-                    />
-                </View>
-
                 <ScrollView
-                    contentContainerStyle={{ flexGrow: 1, paddingVertical: 60, justifyContent: 'center' }}
+                    className="flex-1 bg-brand-navy"
+                    contentContainerStyle={{ flexGrow: 1 }}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
+                    bounces={false}
                 >
-                    <View style={{ paddingHorizontal: 24 }}>
-                        {/* Header */}
-                        <View className="items-center mb-10">
-                            <View
-                                className="w-24 h-24 rounded-3xl items-center justify-center mb-6"
-                                style={{
-                                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                    borderWidth: 2,
-                                    borderColor: 'rgba(255, 255, 255, 0.2)',
-                                }}
-                            >
-                                <Building2 size={40} color="white" />
-                            </View>
-                            <Text
-                                className="text-4xl font-bold mb-2"
-                                style={{
-                                    color: 'white',
-                                    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-                                    textShadowOffset: { width: 0, height: 2 },
-                                    textShadowRadius: 4,
-                                }}
-                            >
-                                Welcome Back
-                            </Text>
-                            <Text
-                                className="text-center text-lg"
-                                style={{ color: 'rgba(255, 255, 255, 0.9)' }}
-                            >
-                                Sign in to Essel Projects
-                            </Text>
+                    {/* ── Brand panel (web: right panel) ── */}
+                    <View className="bg-white items-center px-6 pt-8 pb-12 overflow-hidden">
+                        {/* Orange top accent stripe */}
+                        <LinearGradient
+                            colors={[brand.orangeDark, brand.orangeLight, brand.orangeDark]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 6 }}
+                        />
+
+                        {/* Decorative shapes */}
+                        <View pointerEvents="none" className="absolute top-6 right-6 w-16 h-16 rounded-full border-2 border-orange-400/30" />
+                        <View pointerEvents="none" className="absolute bottom-10 left-6 w-12 h-12 border-2 border-brand-navy/15" style={{ transform: [{ rotate: '45deg' }] }} />
+
+                        <Image
+                            source={require('@/assets/images/essellogo.png')}
+                            style={{ width: 110, height: 94 }}
+                            resizeMode="contain"
+                        />
+                        <Text className="text-2xl font-bold text-brand-navy mt-5 text-center">
+                            Essel Projects Pvt Ltd
+                        </Text>
+                        <Text className="text-sm mt-2 text-center tracking-wide">
+                            <Text className="text-brand-navy">Built On Integrity. </Text>
+                            <Text className="text-orange-500">Driven By Performance</Text>
+                        </Text>
+                    </View>
+
+                    {/* ── Form panel (web: left panel) ── */}
+                    <View className="flex-1 bg-brand-navy -mt-6 rounded-t-3xl px-6 pt-8 pb-6">
+                        {quick === undefined ? (
+                            <ActivityIndicator size="small" color={brand.orangeLight} style={{ marginTop: 40 }} />
+                        ) : showQuickLoginPanel ? (
+                            <QuickLoginPanel
+                                info={quick}
+                                busy={submitting}
+                                onUnlocked={signInWithQuickLogin}
+                                onUsePassword={switchToPassword}
+                                onForget={forgetQuickLogin}
+                            />
+                        ) : (
+                        <>
+                        <View className="items-center mb-8">
+                            <Text className="text-3xl font-bold text-white mb-2">Log In</Text>
+                            <Text className="text-orange-200">Welcome back to your account</Text>
                         </View>
 
-                        {/* Login Form */}
-                        <View
-                            className="rounded-2xl p-6"
-                            style={{
-                                backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                borderWidth: 1,
-                                borderColor: 'rgba(255, 255, 255, 0.2)',
-                            }}
-                        >
-                            {/* Employee ID Input */}
-                            <View className="mb-5">
-                                <Text
-                                    className="font-semibold mb-3 text-base"
-                                    style={{ color: 'rgba(255, 255, 255, 0.9)' }}
-                                >
-                                    Employee ID
-                                </Text>
-                                <View className="relative">
-                                    <TextInput
-                                        value={formik.values.employeeId}
-                                        onChangeText={formik.handleChange('employeeId')}
-                                        onBlur={() => {
-                                            formik.handleBlur('employeeId');
-                                            setFocusedField('');
-                                        }}
-                                        onFocus={() => setFocusedField('employeeId')}
-                                        placeholder="Enter your employee ID"
-                                        placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                                        className="rounded-xl px-4 py-4 pr-12 text-base"
-                                        style={{
-                                            backgroundColor: focusedField === 'employeeId'
-                                                ? 'rgba(255, 255, 255, 0.25)'
-                                                : 'rgba(255, 255, 255, 0.2)',
-                                            borderWidth: 2,
-                                            borderColor: focusedField === 'employeeId'
-                                                ? 'rgba(255, 255, 255, 0.5)'
-                                                : formik.touched.employeeId && formik.errors.employeeId
-                                                    ? 'rgba(239, 68, 68, 0.6)'
-                                                    : 'rgba(255, 255, 255, 0.3)',
-                                            color: 'white',
-                                        }}
-                                        editable={!loading.validateEmployee}
-                                        autoCapitalize="none"
-                                        autoCorrect={false}
-                                    />
-                                    <View className="absolute right-4 top-4">
-                                        <User
-                                            size={20}
-                                            color={focusedField === 'employeeId' ? 'white' : 'rgba(255, 255, 255, 0.7)'}
-                                        />
-                                    </View>
-                                </View>
-                                {formik.touched.employeeId && formik.errors.employeeId && (
-                                    <Text
-                                        className="text-sm mt-2 ml-2"
-                                        style={{ color: 'rgba(239, 68, 68, 0.9)' }}
-                                    >
-                                        {formik.errors.employeeId}
-                                    </Text>
-                                )}
+                        <View className="gap-6">
+                            <BrandInput
+                                label="Employee ID"
+                                value={formik.values.employeeId}
+                                onChangeText={formik.handleChange('employeeId')}
+                                onBlur={() => formik.handleBlur('employeeId')}
+                                error={formik.touched.employeeId && formik.errors.employeeId}
+                                editable={!submitting}
+                                returnKeyType="next"
+                            />
+
+                            <BrandInput
+                                label="Password"
+                                isPassword
+                                value={formik.values.password}
+                                onChangeText={formik.handleChange('password')}
+                                onBlur={() => formik.handleBlur('password')}
+                                error={formik.touched.password && formik.errors.password}
+                                editable={!submitting}
+                                returnKeyType="go"
+                                onSubmitEditing={() => !submitDisabled && formik.handleSubmit()}
+                            />
+
+                            <View className="flex-row justify-between -mt-2">
+                                {quick ? (
+                                    <TouchableOpacity onPress={() => setUsePassword(false)} disabled={submitting}>
+                                        <Text className="text-sm font-medium text-orange-400">Use PIN instead</Text>
+                                    </TouchableOpacity>
+                                ) : <View />}
+                                <TouchableOpacity>
+                                    <Text className="text-sm font-medium text-orange-400">Forgot password?</Text>
+                                </TouchableOpacity>
                             </View>
 
-                            {/* Password Input */}
-                            <View className="mb-6">
-                                <Text
-                                    className="font-semibold mb-3 text-base"
-                                    style={{ color: 'rgba(255, 255, 255, 0.9)' }}
-                                >
-                                    Password
-                                </Text>
-                                <View className="relative">
-                                    <TextInput
-                                        value={formik.values.password}
-                                        onChangeText={formik.handleChange('password')}
-                                        onBlur={() => {
-                                            formik.handleBlur('password');
-                                            setFocusedField('');
-                                        }}
-                                        onFocus={() => setFocusedField('password')}
-                                        placeholder="Enter your password"
-                                        placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                                        secureTextEntry={!showPassword}
-                                        className="rounded-xl px-4 py-4 pr-20 text-base"
-                                        style={{
-                                            backgroundColor: focusedField === 'password'
-                                                ? 'rgba(255, 255, 255, 0.25)'
-                                                : 'rgba(255, 255, 255, 0.2)',
-                                            borderWidth: 2,
-                                            borderColor: focusedField === 'password'
-                                                ? 'rgba(255, 255, 255, 0.5)'
-                                                : formik.touched.password && formik.errors.password
-                                                    ? 'rgba(239, 68, 68, 0.6)'
-                                                    : 'rgba(255, 255, 255, 0.3)',
-                                            color: 'white',
-                                        }}
-                                        editable={!loading.validateEmployee}
-                                        autoCapitalize="none"
-                                        autoCorrect={false}
-                                    />
-                                    <View className="absolute right-4 top-4 flex-row items-center">
-                                        <TouchableOpacity
-                                            onPress={() => setShowPassword(!showPassword)}
-                                            disabled={loading.validateEmployee}
-                                            className="mr-3"
-                                        >
-                                            {showPassword ? (
-                                                <EyeOff
-                                                    size={20}
-                                                    color={focusedField === 'password' ? 'white' : 'rgba(255, 255, 255, 0.7)'}
-                                                />
-                                            ) : (
-                                                <Eye
-                                                    size={20}
-                                                    color={focusedField === 'password' ? 'white' : 'rgba(255, 255, 255, 0.7)'}
-                                                />
-                                            )}
-                                        </TouchableOpacity>
-                                        <Lock
-                                            size={20}
-                                            color={focusedField === 'password' ? 'white' : 'rgba(255, 255, 255, 0.7)'}
-                                        />
-                                    </View>
-                                </View>
-                                {formik.touched.password && formik.errors.password && (
-                                    <Text
-                                        className="text-sm mt-2 ml-2"
-                                        style={{ color: 'rgba(239, 68, 68, 0.9)' }}
-                                    >
-                                        {formik.errors.password}
-                                    </Text>
-                                )}
-                            </View>
-
-                            {/* Login Button */}
+                            {/* Log In button — navy → orange gradient */}
                             <TouchableOpacity
                                 onPress={() => formik.handleSubmit()}
-                                disabled={loading.validateEmployee || !formik.isValid || !formik.dirty}
-                                className="rounded-xl py-4 px-6"
-                                style={{
-                                    backgroundColor: loading.validateEmployee || !formik.isValid || !formik.dirty
-                                        ? 'rgba(255, 255, 255, 0.3)'
-                                        : 'rgba(255, 255, 255, 0.9)',
-                                }}
+                                disabled={submitDisabled}
+                                activeOpacity={0.85}
+                                style={{ opacity: submitDisabled && !submitting ? 0.5 : 1 }}
                             >
-                                {loading.validateEmployee ? (
-                                    <View className="flex-row items-center justify-center">
-                                        <ActivityIndicator size="small" color="#4f46e5" />
-                                        <Text
-                                            className="font-semibold ml-3 text-lg"
-                                            style={{ color: '#4f46e5' }}
-                                        >
-                                            Signing in...
-                                        </Text>
-                                    </View>
-                                ) : (
-                                    <Text
-                                        className="font-bold text-center text-lg"
-                                        style={{ color: '#4f46e5' }}
-                                    >
-                                        Sign In
-                                    </Text>
-                                )}
-                            </TouchableOpacity>
-
-                            {/* Forgot Password */}
-                            <TouchableOpacity className="mt-6">
-                                <Text
-                                    className="text-center font-medium text-base underline"
-                                    style={{ color: 'rgba(255, 255, 255, 0.9)' }}
+                                <LinearGradient
+                                    colors={['#1e3a8a', brand.orange]} // Tailwind blue-900 → orange-500
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={{ borderRadius: 12, paddingVertical: 16, alignItems: 'center' }}
                                 >
-                                    Forgot Password?
-                                </Text>
+                                    {submitting ? (
+                                        <View className="flex-row items-center">
+                                            <ActivityIndicator size="small" color="#ffffff" />
+                                            <Text className="text-white font-semibold text-base ml-2">Verifying...</Text>
+                                        </View>
+                                    ) : (
+                                        <Text className="text-white font-semibold text-base">Log In</Text>
+                                    )}
+                                </LinearGradient>
                             </TouchableOpacity>
-                        </View>
 
-                        {/* Footer */}
-                        <View className="mt-8">
-                            <Text
-                                className="text-center text-sm"
-                                style={{ color: 'rgba(255, 255, 255, 0.7)' }}
-                            >
+                            <Text className="text-sm text-white/50 text-center">
                                 Having trouble? Contact{' '}
                                 <Text
-                                    className="font-medium"
-                                    style={{ color: 'rgba(255, 255, 255, 0.9)' }}
+                                    className="text-orange-400 font-medium"
+                                    onPress={() => Linking.openURL('mailto:it-support@sltouch.in')}
                                 >
                                     IT Support
                                 </Text>
                             </Text>
                         </View>
+                        </>
+                        )}
+
+                        {/* Copyright footer */}
+                        <View className="mt-auto pt-8">
+                            <View className="border-t border-white/10 pt-4 items-center">
+                                <Text className="text-xs text-white/35 text-center">
+                                    © {new Date().getFullYear()} SL Touch IT Solutions Pvt Ltd · Powered by
+                                </Text>
+                                <View className="bg-white rounded-lg px-2 py-1 mt-2">
+                                    <Image
+                                        source={require('@/assets/images/corex-wordmark.png')}
+                                        style={{ width: 90, height: 36 }}
+                                        resizeMode="contain"
+                                    />
+                                </View>
+                                <Text className="text-xs text-white/35 mt-2">All rights reserved</Text>
+                            </View>
+                        </View>
                     </View>
                 </ScrollView>
-            </LinearGradient>
-        </KeyboardAvoidingView>
+            </KeyboardAvoidingView>
+
+            {(awaitingPortalChoice || leavingTo) && (
+                <BottomSheet
+                    visible={!leavingTo}
+                    onDismissed={() => leavingTo && router.replace(leavingTo)}
+                    onRequestClose={() => {
+                        if (pendingSetup) setPendingSetup(null); // same as "Not now"
+                        else if (!portalLoading) cancelLoginOptions();
+                    }}
+                >
+                    {pendingSetup ? (
+                        <QuickLoginSetupSheet
+                            employeeId={pendingSetup.employeeId}
+                            password={pendingSetup.password}
+                            onDone={() => setPendingSetup(null)}
+                        />
+                    ) : (
+                        <LoginOptionsSheet onClose={cancelLoginOptions} />
+                    )}
+                </BottomSheet>
+            )}
+        </SafeAreaView>
     );
 }

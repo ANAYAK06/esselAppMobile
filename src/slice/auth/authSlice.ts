@@ -63,6 +63,7 @@ export interface UserData {
     roleId: string;
     employeeId: string;
     ccCodes: string[];
+    groupId?: number; // approval-chain group, used by the role dashboard's pending tracking
     isFirstTimeLogin: boolean;
     isExist: boolean;
     uid: string;
@@ -98,7 +99,7 @@ export const validateEmployee = createAsyncThunk<
     'auth/validateEmployee',
     async (credentials, { rejectWithValue }) => {
         try {
-            console.log('🔍 Calling validateEmployee API with:', credentials);
+            console.log('🔍 Calling validateEmployee API for:', credentials.employeeId);
 
             const response: ApiResponse<EmployeeValidationData> = await validateEmployeeAPI(credentials);
 
@@ -186,6 +187,7 @@ export const validateUser = createAsyncThunk<
                         roleId: roleId,
                         employeeId: credentials.employeeId,
                         ccCodes: response.Data.ccCodes,
+                        groupId: Number(response.Data.GroupId) || 0,
                         isFirstTimeLogin: response.Data.IsFirstTimeLogin,
                         isExist: response.Data.IsExist,
                         uid: response.Data.UID,
@@ -223,6 +225,7 @@ export const validateUser = createAsyncThunk<
                         roleId: roleId,
                         employeeId: credentials.employeeId,
                         ccCodes: response.Data.ccCodes || [],
+                        groupId: Number(response.Data.GroupId) || 0,
                         isFirstTimeLogin: response.Data.IsFirstTimeLogin || false,
                         isExist: response.Data.IsExist || false,
                         uid: response.Data.UID || '',
@@ -269,7 +272,9 @@ export const getEmployeeDetails = createAsyncThunk<
 
             console.log('🎯 Employee Details Response:', response);
 
-            if (response.IsSuccessful) {
+            // Accept data when present regardless of IsSuccessful — the API returns false even on
+            // success (same rule as the Corex web app)
+            if (response?.Data && (response.IsSuccessful === true || response.ResponseCode === 200)) {
                 await saveToStorage('employeeData', response.Data);
                 await saveToStorage('loginType', 'employee');
 
@@ -368,7 +373,7 @@ export const loadFromStorage = createAsyncThunk<
 );
 
 // Initial State
-const initialState: AuthState = {
+export const initialState: AuthState = {
     isAuthenticated: false,
     employeeValidated: false,
     loginType: null,

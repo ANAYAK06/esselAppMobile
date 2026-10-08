@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="NONE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="db74f1f1-0245-4f51-ac60-5e24ba6a6557" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/(dashboard)/employee-dashboard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/app/(dashboard)/employee-dashboard.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/api/hr/employeePortalAPI.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/api/hr/employeePortalAPI.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/employee/EmployeeHeader.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/employee/EmployeeHeader.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/employee/PortalUI.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/employee/PortalUI.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/slice/hr/employeePortalSlice.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/slice/hr/employeePortalSlice.ts" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 2
+}</component>
+  <component name="ProjectId" id="343GBRmJLx1xbi6vqf82e7nC4Qu" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+    <option name="sortKey" value="BY_TIME_DESCENDING" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;upgrade/sdk-57&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;C:\\Users\\AadhiAami\\Desktop\\ESSELMOB\\node_modules\\typescript\\lib&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-b598e85cdad2-JavaScript-WS-252.25557.126" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="db74f1f1-0245-4f51-ac60-5e24ba6a6557" name="Changes" comment="" />
+      <created>1760436120983</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1760436120983</updated>
+      <workItem from="1760436123014" duration="1166000" />
+      <workItem from="1760503109538" duration="19473000" />
+      <workItem from="1760587183139" duration="20531000" />
+      <workItem from="1761735915562" duration="3092000" />
+      <workItem from="1761796699699" duration="19334000" />
+      <workItem from="1761890884289" duration="11604000" />
+      <workItem from="1761970031256" duration="111000" />
+      <workItem from="1761979300362" duration="2231000" />
+      <workItem from="1762160432022" duration="3622000" />
+      <workItem from="1762230326902" duration="18981000" />
+      <workItem from="1762330235557" duration="4721000" />
+      <workItem from="1762336751188" duration="595000" />
+      <workItem from="1769837700649" duration="335000" />
+      <workItem from="1771930512211" duration="52000" />
+      <workItem from="1771930579480" duration="1133000" />
+      <workItem from="1773718708933" duration="641000" />
+      <workItem from="1790586931873" duration="6830000" />
+      <workItem from="1790681759539" duration="2730000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>

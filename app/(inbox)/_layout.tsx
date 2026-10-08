@@ -1,11 +1,12 @@
-// app/(auth)/_layout.tsx
+// app/(inbox)/_layout.tsx
 import { Stack } from 'expo-router';
 
-export default function AuthLayout() {
+export default function InboxLayout() {
     return (
         <Stack
             screenOptions={{
                 headerShown: false,
+                animation: 'slide_from_right',
             }}
         />
     );

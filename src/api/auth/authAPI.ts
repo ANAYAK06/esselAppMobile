@@ -2,6 +2,9 @@
 import axios from "axios";
 import { API_BASE_URL } from '@/src/service/apiConfig';
 
+// Without a timeout a hung request keeps the login sheet's buttons disabled indefinitely
+const AUTH_TIMEOUT_MS = 30000;
+
 // Type definitions for API requests and responses
 export interface AuthCredentials {
     employeeId: string;
@@ -17,6 +20,7 @@ export interface ApiResponse<T> {
     IsSuccessful: boolean;
     Message: string;
     Data: T;
+    ResponseCode?: number;
 }
 
 export interface EmployeeValidationData {
@@ -33,6 +37,7 @@ export interface UserValidationData {
     MailId: string;
     UserRoleCode: string;
     ccCodes: string[];
+    GroupId?: number;
     IsFirstTimeLogin: boolean;
     IsExist: boolean;
     UID: string;
@@ -59,7 +64,7 @@ export const validateEmployee = async (credentials: AuthCredentials): Promise<Ap
             Password: credentials.password     // Convert password to Password (capital P)
         };
 
-        console.log('🔍 Sending to backend:', backendPayload); // DEBUG
+        console.log('🔍 Sending to backend for:', backendPayload.Username); // DEBUG (never log the password)
         console.log('🌐 API URL:', `${API_BASE_URL}/Security/GetValidEmployee`); // DEBUG
 
         const response = await axios.post<ApiResponse<EmployeeValidationData>>(
@@ -68,7 +73,8 @@ export const validateEmployee = async (credentials: AuthCredentials): Promise<Ap
             {
                 headers: {
                     'Content-Type': 'application/json'
-                }
+                },
+                timeout: AUTH_TIMEOUT_MS,
             }
         );
 
@@ -97,7 +103,7 @@ export const validateUser = async (credentials: AuthCredentials): Promise<ApiRes
             Password: credentials.password     // Convert password to Password (capital P)
         };
 
-        console.log('🔍 Sending user validation to backend:', backendPayload); // DEBUG
+        console.log('🔍 Sending user validation to backend for:', backendPayload.Username); // DEBUG (never log the password)
 
         const response = await axios.post<ApiResponse<UserValidationData>>(
             `${API_BASE_URL}/Security/GetValidUser`,
@@ -105,7 +111,8 @@ export const validateUser = async (credentials: AuthCredentials): Promise<ApiRes
             {
                 headers: {
                     'Content-Type': 'application/json'
-                }
+                },
+                timeout: AUTH_TIMEOUT_MS,
             }
         );
         console.log('✅ Validated user data:', response.data);
@@ -132,7 +139,8 @@ export const getEmployeeDetails = async (username: string): Promise<ApiResponse<
             {
                 headers: {
                     'Content-Type': 'application/json'
-                }
+                },
+                timeout: AUTH_TIMEOUT_MS,
             }
         );
         console.log('✅ GET EmployeeDetails:', response.data);
@@ -158,7 +166,8 @@ export const getMenu = async (roleId: string): Promise<ApiResponse<MenuData[]>> 
             {
                 headers: {
                     'Content-Type': 'application/json'
-                }
+                },
+                timeout: AUTH_TIMEOUT_MS,
             }
         );
 

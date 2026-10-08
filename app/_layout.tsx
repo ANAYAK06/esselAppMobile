@@ -7,10 +7,13 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Import separated Redux Provider
 import { ReduxProvider } from '@/src/store/ReduxProvider';
+import { useOtaUpdates } from '@/src/hooks/useOtaUpdates';
 
 import './globals.css';
 
 export default function RootLayout() {
+    useOtaUpdates();
+
     useEffect(() => {
         console.log('App initializing...');
     }, []);

@@ -1,11 +1,26 @@
 // src/store/store.ts - Redux Store Configuration
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
-import { persistReducer, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from 'redux-persist';
+import { persistReducer, createTransform, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from 'redux-persist';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Import auth slice
-import authReducer from '../slice/auth/authSlice';
+import authReducer, { initialState as authInitialState } from '../slice/auth/authSlice';
 import inboxNotificationReducer from '../slice/notifications/inboxNotificationsSlice'
+import employeePortalReducer from '@/src/slice/hr/employeePortalSlice'
+import rejectionAlertsReducer from '@/src/slice/notifications/rejectionAlertsSlice'
+// Request flags (loading / errors / success) are per-session: if one was saved mid-request
+// (app reloaded or killed), the login sheet came back with every button disabled for good.
+const authTransientFlags = createTransform<any, any, any, any>(
+    (inbound: any) => inbound,
+    (outbound: any) => ({
+        ...outbound,
+        loading: authInitialState.loading,
+        errors: authInitialState.errors,
+        success: authInitialState.success,
+    }),
+    { whitelist: ['auth'] }
+);
+
 // Configure Redux Persist
 const persistConfig = {
     key: 'root',
@@ -13,17 +28,21 @@ const persistConfig = {
     storage: AsyncStorage,
     whitelist: ['auth'], // Persist auth state only
     blacklist: [], // Don't persist these slices
+    transforms: [authTransientFlags],
 };
 
 // Root reducer - combining all slices
 const rootReducer = combineReducers({
     auth: authReducer,
-    inboxnotifications:inboxNotificationReducer
+    inboxnotifications:inboxNotificationReducer,
+    employeePortal: employeePortalReducer,
+    rejectionAlerts: rejectionAlertsReducer,
+
 
 });
 
 // Create persisted reducer
-const persistedReducer = persistReducer(persistConfig, rootReducer);
+const persistedReducer = persistReducer<ReturnType<typeof rootReducer>>(persistConfig, rootReducer);
 
 // Configure and create store
 export const store = configureStore({
