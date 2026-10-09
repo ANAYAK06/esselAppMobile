@@ -63,6 +63,7 @@ export const StatCard = ({
     icon: Icon,
     tone = 'navy',
     onPress,
+    valueAccessory,
 }: {
     label: string;
     value: string | number;
@@ -70,6 +71,8 @@ export const StatCard = ({
     icon?: LucideIcon;
     tone?: StatTone;
     onPress?: () => void;
+    // Rendered right after the value, e.g. a reveal/hide eye icon
+    valueAccessory?: React.ReactNode;
 }) => {
     const isDark = tone !== 'white';
 
@@ -85,9 +88,12 @@ export const StatCard = ({
                     </View>
                 )}
             </View>
-            <Text className={`text-xl font-bold mt-2 ${isDark ? 'text-white' : 'text-brand-navy'}`} numberOfLines={1}>
-                {value}
-            </Text>
+            <View className="flex-row items-center gap-2 mt-2">
+                <Text className={`text-xl font-bold flex-shrink ${isDark ? 'text-white' : 'text-brand-navy'}`} numberOfLines={1}>
+                    {value}
+                </Text>
+                {valueAccessory}
+            </View>
             {sub ? (
                 <Text className={`text-xs mt-0.5 ${isDark ? 'text-white/50' : 'text-gray-400'}`} numberOfLines={1}>
                     {sub}

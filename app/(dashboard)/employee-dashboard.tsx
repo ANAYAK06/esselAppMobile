@@ -7,7 +7,7 @@ import { router, type Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import {
-    ArrowRight, Bell, CalendarCheck, ChevronRight, ClipboardCheck, Clock, CreditCard, LayoutGrid, ListChecks, Wallet,
+    ArrowRight, Bell, CalendarCheck, ChevronRight, ClipboardCheck, Clock, CreditCard, Eye, EyeOff, LayoutGrid, ListChecks, Wallet,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
@@ -50,6 +50,8 @@ export default function EmployeeDashboard() {
 
     const [refreshing, setRefreshing] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    // Salary stays masked until the user taps to reveal it
+    const [payslipRevealed, setPayslipRevealed] = useState(false);
 
     const d = employeeData || {};
     const empRefNo: string | undefined = d.EmpRefno;
@@ -158,10 +160,22 @@ export default function EmployeeDashboard() {
                     <View className="flex-row gap-3">
                         <StatCard
                             label="Last Payslip"
-                            value={loading.payslipList ? '…' : lastPayslip ? formatRupees(lastPayslip.NetValue) : '—'}
+                            value={
+                                loading.payslipList ? '…'
+                                    : !lastPayslip ? '—'
+                                        : payslipRevealed ? formatRupees(lastPayslip.NetValue) : '₹ ••••••'
+                            }
                             sub={lastPayslip ? `${lastPayslip.MonthName} ${lastPayslip.Year}` : 'No payslip yet'}
                             icon={Wallet}
                             tone="white"
+                            onPress={lastPayslip ? () => setPayslipRevealed((v) => !v) : undefined}
+                            valueAccessory={
+                                lastPayslip && !loading.payslipList
+                                    ? payslipRevealed
+                                        ? <EyeOff size={16} color={brand.orange} />
+                                        : <Eye size={16} color={brand.orange} />
+                                    : undefined
+                            }
                         />
                         <StatCard
                             label="Open Requests"
