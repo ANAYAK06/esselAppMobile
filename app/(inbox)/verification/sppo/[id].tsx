@@ -10,8 +10,9 @@ import { useApiData } from '@/src/hooks/useApiData';
 import { approveSPPO, getSPPODetail, type SPPORow, type SPPOService } from '@/src/api/verification/sppoVerificationAPI';
 import { appendApprovalComment, type StatusAction } from '@/src/api/verification/verificationCommonAPI';
 import {
-    ActionPanel, DetailHero, FieldGrid, RemarksTimeline, Section, money, showSubmitResult,
+    ActionPanel, DetailHero, DocumentLinks, FieldGrid, RemarksTimeline, Section, money, showSubmitResult,
 } from '@/src/components/verification/kit/VerificationKit';
+import { buildSPPOUrl } from '@/src/service/s3Config';
 import { useRowParam, useVerifier } from '@/src/components/verification/kit/useVerifier';
 import SPPOServiceCard, { num } from '@/src/components/verification/sppo/SPPOServiceCard';
 
@@ -111,6 +112,8 @@ export default function SPPODetailScreen() {
                             ]}
                         />
                     </Section>
+
+                    <DocumentLinks links={[{ label: 'SPPO Attachment', url: buildSPPOUrl(d.FilePath) }]} />
 
                     <Section
                         title={`Services (${services.length})`}
