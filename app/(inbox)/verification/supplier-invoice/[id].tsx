@@ -14,7 +14,7 @@ import {
     vendorDisplayName,
     type SupplierInvoiceRow,
 } from '@/src/api/verification/invoiceVerificationAPI';
-import { appendApprovalComment, type StatusAction } from '@/src/api/verification/verificationCommonAPI';
+import { type StatusAction } from '@/src/api/verification/verificationCommonAPI';
 import { buildMRRUrl, buildVendorInvoiceUrl } from '@/src/service/s3Config';
 import {
     ActionPanel, DetailHero, DocumentLinks, FieldGrid, Section, money, showSubmitResult,
@@ -26,7 +26,7 @@ const num = (v: unknown) => parseFloat(String(v ?? 0)) || 0;
 
 export default function SupplierInvoiceDetailScreen() {
     const row = useRowParam<SupplierInvoiceRow>();
-    const { roleId, uid, userName, roleCode } = useVerifier();
+    const { roleId, userName } = useVerifier();
     const [reloadKey, setReloadKey] = useState(0);
 
     const load = useCallback(() => getSupplierInvoiceDetail(row!.InvoiceNo), [row, reloadKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -37,24 +37,20 @@ export default function SupplierInvoiceDetailScreen() {
         if (!row) return;
         const act = action.value || action.type;
         const payload: Record<string, unknown> = {
-            InvoiceNo: row.InvoiceNo,
-            ApprovalNote: note,
-            Remarks: appendApprovalComment(d?.ApprovedUser, roleCode || 'Invoice Verifier', userName, note),
+            InvoiceNo: d?.InvoiceNo || row.InvoiceNo,
+            PONo: d?.PONo || row.PONo,
+            CCCode: d?.CCCode || row.CCCode,
             Action: act,
-            Roleid: roleId,
-            Userid: uid,
-            SupplierCode: row.VendorId,
-            Createdby: userName,
-            Amount: d?.NetAmount || row.NetAmount,
-            InvoiceDate: d?.InvoiceDate || row.InvoiceDate,
-            ApprovalStatus: act,
-            ...(d?.MOID ? { MOID: d.MOID } : {}),
-            ...(d?.PONo ? { PONo: d.PONo } : {}),
-            ...(d?.MRR ? { MRR: d.MRR } : {}),
-            ...(d?.InvoiceValue ? { InvoiceValue: d.InvoiceValue } : {}),
+            ApprovalNote: note,
+            RoleId: roleId,
+            CreatedBy: userName,
         };
         try {
             const status = await approveSupplierInvoice(payload);
+            if (status !== 'Submited' && status !== 'Submitted') {
+                Alert.alert('Not applied', status || 'The server returned no confirmation.');
+                return;
+            }
             showSubmitResult(`${action.text} completed successfully`, status, () => router.back());
         } catch (e: any) {
             Alert.alert('Error', e?.response?.data?.Message || e?.message || `Failed to ${action.text.toLowerCase()}`);
