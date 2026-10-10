@@ -84,12 +84,16 @@ export const INBOX_ROUTES: InboxRoute[] = [
         match: (f) =>
             anyIncludes(f, ['verifysupplierpoamend']) ||
             META.some((k) => f[k].includes('supplier po') && f[k].includes('amend')),
+        // Separate PCC / NPCC entries ('/Purchase/VerifySupplierPOAmend?CCType=NPCC', 'Supplier PO Amend(NPCC)')
+        query: (f) => (/cctype=npcc/.test(f.path) || /\(npcc\)/.test(f.category) ? '?ccType=NPCC' : ''),
     },
     {
         key: 'supplier-po',
         label: 'Supplier PO',
         href: '/(inbox)/verification/supplier-po/list',
         match: (f) => !anyIncludes(f, ['amend']) && anyIncludes(f, ['verifysupplierpo', 'supplier po']),
+        // Separate PCC / NPCC entries ('/Purchase/VerifySupplierPO?CCType=NPCC', 'Supplier PO Creation(NPCC)')
+        query: (f) => (/cctype=npcc/.test(f.path) || /\(npcc\)/.test(f.category) ? '?ccType=NPCC' : ''),
     },
     viaConfig('CostCenterApproval', 'Cost Center Approval', (f) => anyIncludes(f, ['approvecostcenter', 'cost center approval', 'costcenterapproval'])),
     viaConfig('GeneralInvoice', 'General Invoice', (f) => anyIncludes(f, ['approvegeneralinvoice', 'general invoice approval', 'generalinvoiceapproval', 'general invoice', 'generalinvoice'])),

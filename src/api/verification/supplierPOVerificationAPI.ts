@@ -1,7 +1,7 @@
 // Supplier PO verifications — same routes, methods and payload fields as the Corex web:
 //   Supplier PO       → pages/SupplierPO/VerifySupplierPO.jsx (api/SupplierPOAPI/supplierPOAPI.js)
 //   Supplier PO Amend → pages/SupplierPO/VerifySupplierPOAmend.jsx
-// Both queues are fetched for CCType 'PCC', as the web does.
+// The inbox has separate PCC and NPCC Supplier PO entries; the queue is fetched for the entry's CC type.
 import axios from 'axios';
 import { API_BASE_URL } from '@/src/service/apiConfig';
 
@@ -44,6 +44,7 @@ export interface SupplierPOItem {
     NewBasicprice?: number | string;   // purchase price
     ItemNewPrice?: number | string;    // latest price on record (recent change when ≠ standard)
     Amount?: number | string;
+    OldAmount?: number | string;       // standard price × qty as saved (legacy hidden column)
     CGSTPercent?: number | string;
     SGSTPercent?: number | string;
     IGSTPercent?: number | string;
@@ -59,6 +60,7 @@ export interface SupplierPODetail {
     CCCode?: string;
     CCType?: string;
     Status?: string;
+    PaymentType?: string;
     MOID?: number;
     VendorName?: string;
     VendorAddress?: string;
@@ -75,7 +77,7 @@ export interface SupplierPODetail {
     LCApplicable?: string;           // 'Yes' / 'No', chosen at PO creation
     Remarks?: string;                // PO terms, "|"-separated
     ApprovedUser?: string;           // approval comments so far, "||"-separated
-    PriceChangeAccess?: string;
+    PriceChangeRole?: number | string; // role allowed to change master standard prices (0 = none)
     ItemTermHeadID?: number;
     PreferredRemarks?: string | null;
     PredefinedTermsExist?: string;
@@ -89,8 +91,10 @@ export interface PreviousPurchase {
     BasicPrice?: number | string;
 }
 
-export const getSupplierPOQueue = (roleId: string, uid: string) =>
-    list<SupplierPORow>('Purchase/GetVerificationSupplierPO', { Roleid: roleId, Userid: uid, CCType: 'PCC' });
+export type SupplierPOCCType = 'PCC' | 'NPCC';
+
+export const getSupplierPOQueue = (roleId: string, uid: string, ccType: SupplierPOCCType = 'PCC') =>
+    list<SupplierPORow>('Purchase/GetVerificationSupplierPO', { Roleid: roleId, Userid: uid, CCType: ccType });
 
 export const getSupplierPODetail = (row: SupplierPORow) =>
     get<SupplierPODetail>('Purchase/GetVerificationSupplierPObyPO', { PONo: row.PONo, IndentNo: row.IndentNo });
@@ -124,6 +128,7 @@ export interface SupplierPOAmendItem {
     units?: string;
     quantity?: number | string;
     CurrentQty?: number | string;
+    ItemType?: string;              // 'New' (purchase price editable at verification) / 'Existing'
     AmendType?: string;             // Add / Substract
     AmendQty?: number | string;
     PONewQty?: number | string;
@@ -175,8 +180,8 @@ export interface PODocument {
     POCount?: number;
 }
 
-export const getSupplierPOAmendQueue = (roleId: string, uid: string) =>
-    list<SupplierPOAmendRow>('Purchase/GetVerifySupplierPOAmend', { Roleid: roleId, Userid: uid, CCType: 'PCC' });
+export const getSupplierPOAmendQueue = (roleId: string, uid: string, ccType: SupplierPOCCType = 'PCC') =>
+    list<SupplierPOAmendRow>('Purchase/GetVerifySupplierPOAmend', { Roleid: roleId, Userid: uid, CCType: ccType });
 
 export const getSupplierPOAmendDetail = (row: SupplierPOAmendRow) =>
     get<SupplierPOAmendDetail>('Purchase/GetSupplierPOAmendbyPO', { AmendPONO: row.AmendPONO, PONo: row.PONo, IndentNo: row.IndentNo });

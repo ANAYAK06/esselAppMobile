@@ -1,11 +1,12 @@
 // Supplier PO verification — mobile version of the web pages/SupplierPO/VerifySupplierPO.jsx.
-// Tick every line (the purchase price can be lowered before ticking); when a line's standard
-// and purchase prices differ, ticking asks whether to update the standard price. Return is not
+// Tick every line (the purchase price can be lowered before ticking); for the PO's price-change
+// role, ticking a line whose standard and purchase prices differ asks whether to update the
+// standard price. Return is not
 // offered for this module. spApproveSupplierPO reads the lines as parallel comma lists and
 // computes tax itself, so the amounts sent are pre-tax.
 import React, { useCallback, useState } from 'react';
 import { View, Text, Alert } from 'react-native';
-import { router, type Href } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { ShoppingBag } from 'lucide-react-native';
 import PortalScreen from '@/src/components/employee/PortalScreen';
 import { EmptyState, LoadingText } from '@/src/components/employee/PortalUI';
@@ -17,14 +18,15 @@ import {
     type SupplierPOItem,
     type SupplierPORow,
 } from '@/src/api/verification/supplierPOVerificationAPI';
-import { appendApprovalComment, type StatusAction } from '@/src/api/verification/verificationCommonAPI';
+import { appendApprovalComment, isSubmitted, type StatusAction } from '@/src/api/verification/verificationCommonAPI';
 import { buildSupplierPOUrl } from '@/src/service/s3Config';
 import {
     ActionPanel, DetailHero, DocumentLinks, FieldGrid, RemarksTimeline, Section, money, showSubmitResult,
 } from '@/src/components/verification/kit/VerificationKit';
 import { useRowParam, useVerifier } from '@/src/components/verification/kit/useVerifier';
-import POItemCard, { hasPriceDifference, num } from '@/src/components/verification/supplierPO/POItemCard';
+import POItemCard, { hasPriceDifference, hasRecentChange, num } from '@/src/components/verification/supplierPO/POItemCard';
 import PreviousPurchasesBody from '@/src/components/verification/supplierPO/PreviousPurchasesBody';
+import { getOpenInboxItem } from '@/src/components/inbox/openInboxItem';
 
 const Address = ({ title, lines }: { title: string; lines: (string | undefined | false)[] }) => (
     <View className="flex-1 rounded-xl bg-gray-50 p-3">
@@ -37,7 +39,12 @@ const Address = ({ title, lines }: { title: string; lines: (string | undefined |
 
 export default function SupplierPODetailScreen() {
     const row = useRowParam<SupplierPORow>();
-    const { roleId, userName, roleCode } = useVerifier();
+    const { ccType } = useLocalSearchParams<{ ccType?: string }>();
+    const { roleId, userName } = useVerifier();
+    // Approval-comment role as the web picks it: the opened inbox entry's InboxTitle || ModuleDisplayName
+    // || 'PO Verifier' (the web's userDetails/userData.roleName are never set, so its chain lands on the title)
+    const [inboxItem] = useState(() => getOpenInboxItem('supplier-po'));
+    const roleName = inboxItem?.InboxTitle || inboxItem?.ModuleDisplayName || 'PO Verifier';
     const [reloadKey, setReloadKey] = useState(0);
 
     const [prices, setPrices] = useState<Record<string, string>>({});      // edited purchase prices
@@ -54,6 +61,11 @@ export default function SupplierPODetailScreen() {
     const state = items[0]?.StateStatus;
     const gst: 'same' | 'other' | 'none' = !state || state === 'NoNeed' ? 'none' : state === 'Same' ? 'same' : 'other';
 
+    // Legacy VerifySupplierPOView: 'Exist' only when the PO's PriceChangeRole is the logged-in role.
+    // spApproveSupplierPO updates the master standard prices only then.
+    const priceChangeRole = num(d?.PriceChangeRole);
+    const priceChangeAccess = priceChangeRole !== 0 && priceChangeRole === num(roleId) ? 'Exist' : 'NotExist';
+
     const priceOf = (it: SupplierPOItem) => prices[it.itemcode] ?? String(it.NewBasicprice ?? 0);
     // Line amount: recomputed only when the verifier edited the price, else the PO's own Amount
     const amountOf = (it: SupplierPOItem) => (prices[it.itemcode] != null ? num(prices[it.itemcode]) * num(it.quantity) : num(it.Amount));
@@ -62,6 +74,7 @@ export default function SupplierPODetailScreen() {
     const edited = Object.keys(prices).length > 0;
     const savings = items.reduce((s, it) => s + (num(it.QuotedPrice) - num(prices[it.itemcode] ?? it.QuotedPrice)) * num(it.quantity), 0);
     const checkedCount = items.filter((it) => checked[it.itemcode]).length;
+    const recentCount = items.filter(hasRecentChange).length;
 
     const openSheet = (content: SheetContent) => {
         setSheet(content);
@@ -70,8 +83,8 @@ export default function SupplierPODetailScreen() {
 
     const changePrice = (it: SupplierPOItem, value: string) => {
         if (value !== '' && !/^\d*\.?\d{0,2}$/.test(value)) return;
-        if (value !== '' && num(value) > num(it.QuotedPrice)) {
-            Alert.alert('Price can only be reduced', `The purchase price cannot be above the quoted price (${money(it.QuotedPrice)}).`);
+        if (value !== '' && num(value) > num(it.NewBasicprice)) {
+            Alert.alert('Price can only be reduced', `The purchase price cannot be above ${money(it.NewBasicprice)}.`);
             return;
         }
         setPrices((p) => ({ ...p, [it.itemcode]: value }));
@@ -84,12 +97,13 @@ export default function SupplierPODetailScreen() {
             return;
         }
         if (priceOf(it) === '') return Alert.alert('Enter the purchase price first');
-        if (!hasPriceDifference(it)) {
+        const standard = num(it.basicprice);
+        const purchase = num(priceOf(it));   // the price as entered now, as the legacy screen reads it
+        // Only the price-change role is asked; it can raise or lower the standard price
+        if (priceChangeAccess !== 'Exist' || standard === purchase) {
             setChecked((p) => ({ ...p, [code]: true }));
             return;
         }
-        const standard = num(it.basicprice);
-        const purchase = num(it.NewBasicprice);
         Alert.alert(
             'Update the standard price?',
             `${it.itemname}\n\nCurrent standard price: ${money(standard)}\nNew purchase price: ${money(purchase)}\nDifference: ${purchase > standard ? '+' : '−'}${money(Math.abs(purchase - standard))}\n\nUpdating sets this as the item's standard price for future PO approvals.`,
@@ -123,13 +137,15 @@ export default function SupplierPODetailScreen() {
             Alert.alert('Please verify all items', `${checkedCount}/${items.length} items verified.`);
             return;
         }
-        if (items.some((it) => priceOf(it) === '')) return Alert.alert('Enter every purchase price');
+        // Legacy ApproveSupplierPO: every purchase price must be above 0 and not above the PO's purchase price
+        if (items.some((it) => !(num(priceOf(it)) > 0))) return Alert.alert('Enter Valid Purchase Price');
+        if (items.some((it) => num(priceOf(it)) > num(it.NewBasicprice))) return Alert.alert('You are not able to increase the purchase price');
 
         const payload = {
             PONo: row.PONo,
             IndentNo: row.IndentNo,
             ApprovalNote: note,
-            Remarks: appendApprovalComment(d.ApprovedUser, roleCode || 'PO Verifier', userName, note),
+            Remarks: appendApprovalComment(d.ApprovedUser, roleName, userName, note),
             Action: action.value || action.type,
             Roleid: roleId,
             Createdby: userName,
@@ -137,11 +153,15 @@ export default function SupplierPODetailScreen() {
             NewPurchasePrices: items.map((it) => `${num(priceOf(it))},`).join(''),
             ItemNewTotal: items.map((it) => `${amountOf(it)},`).join(''),
             Newtotalamt: total,
-            Oldtotalamt: items.reduce((s, it) => s + num(it.basicprice) * num(it.quantity), 0),
+            // Saved OldAmount, else standard price x qty
+            Oldtotalamt: items.reduce((s, it) => s + (it.OldAmount != null ? num(it.OldAmount) : num(it.basicprice) * num(it.quantity)), 0),
             OldPurchasetotalamt: originalTotal,
-            // Echo the server's flag: it decides whether the SP may overwrite the master standard price
-            PriceChangeAccess: d.PriceChangeAccess || '',
-            Standardprices: items.map((it) => `${stdUpdates[it.itemcode] ?? num(it.basicprice)},`).join(''),
+            // Decides whether the SP may overwrite the master standard prices; the list is sent only then,
+            // and an updated standard price never exceeds the (possibly lowered) purchase price
+            PriceChangeAccess: priceChangeAccess,
+            Standardprices: priceChangeAccess === 'Exist'
+                ? items.map((it) => `${stdUpdates[it.itemcode] != null ? Math.min(stdUpdates[it.itemcode], num(priceOf(it))) : num(it.basicprice)},`).join('')
+                : '',
             ItemTermHeadID: d.ItemTermHeadID || 0,
             PreferredRemarks: d.PreferredRemarks || null,
             PredefinedTermsExist: d.PredefinedTermsExist || 'No',
@@ -149,6 +169,11 @@ export default function SupplierPODetailScreen() {
 
         try {
             const status = await approveSupplierPO(payload);
+            // spApproveSupplierPO answers "Submited"; anything else is the error text
+            if (!isSubmitted(status)) {
+                Alert.alert('Not submitted', status || 'Error Occurred');
+                return;
+            }
             const updates = Object.keys(stdUpdates).length;
             showSubmitResult(
                 `${action.text} completed successfully.${updates ? `\n${updates} standard price(s) updated.` : ''}`,
@@ -165,7 +190,7 @@ export default function SupplierPODetailScreen() {
             title="Supplier PO"
             subtitle={row?.PONo}
             icon={ShoppingBag}
-            backHref={'/verification/supplier-po/list' as Href}
+            backHref={(ccType === 'NPCC' ? '/verification/supplier-po/list?ccType=NPCC' : '/verification/supplier-po/list') as Href}
             onRefresh={() => { setPrices({}); setChecked({}); setStdUpdates({}); setReloadKey((k) => k + 1); }}
         >
             {!row ? (
@@ -180,7 +205,7 @@ export default function SupplierPODetailScreen() {
                         title={d.PONo || row.PONo}
                         amount={money(total)}
                         amountLabel={edited ? `Total (was ${money(originalTotal)})` : 'Total amount (before tax)'}
-                        chips={[d.VendorName || row.VendorName, d.CCCode, d.CCType, d.Status && `Status ${d.Status}`]}
+                        chips={[d.VendorName || row.VendorName, d.CCCode, d.CCType, d.PaymentType, d.Status && `Status ${d.Status}`]}
                     />
 
                     <Section>
@@ -190,7 +215,7 @@ export default function SupplierPODetailScreen() {
                                 ['PO Date', d.PODate],
                                 ['Ref No', d.RefNo],
                                 ['Cost Center', d.CCCode],
-                                !!d.LCApplicable && ['LC Applicable', d.LCApplicable],
+                                ['LC Applicable', d.LCApplicable || 'No'],
                                 ['Vendor', d.VendorName, true],
                                 !!d.VendorGST && ['Vendor GST', d.VendorGST],
                                 !!d.VendorAddress && ['Vendor Address', d.VendorAddress, true],
@@ -220,6 +245,11 @@ export default function SupplierPODetailScreen() {
                             {edited && savings > 0 ? ` · savings ${money(savings)}` : ''}
                             {Object.keys(stdUpdates).length ? ` · ${Object.keys(stdUpdates).length} standard price update(s)` : ''}
                         </Text>
+                        {recentCount ? (
+                            <Text className="text-[11px] font-semibold text-brand-navy mb-2">
+                                {recentCount} item(s) have recent price changes. Check the item details for the updated prices.
+                            </Text>
+                        ) : null}
                         {items.map((it) => (
                             <POItemCard
                                 key={it.itemcode}
@@ -234,7 +264,7 @@ export default function SupplierPODetailScreen() {
                                 onHistory={() => openSheet({
                                     title: 'Previous purchases',
                                     subtitle: it.itemname,
-                                    body: <PreviousPurchasesBody itemCode={it.itemcode} currentPrice={num(priceOf(it))} quotedPrice={it.QuotedPrice} />,
+                                    body: <PreviousPurchasesBody itemCode={it.itemcode} currentPrice={num(priceOf(it))} standardPrice={stdUpdates[it.itemcode] ?? num(it.basicprice)} quotedPrice={it.QuotedPrice} />,
                                 })}
                             />
                         ))}

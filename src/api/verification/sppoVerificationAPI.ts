@@ -55,6 +55,7 @@ export interface SPPODetail {
     VendorName?: string;
     CCCode?: string;
     CCName?: string;
+    DCACode?: string;
     DCAName?: string;
     SubDCAName?: string;
     SPPOStartDate?: string;
@@ -63,6 +64,9 @@ export interface SPPODetail {
     Balance?: number;
     TotalValue?: number;
     ApprovedUser?: string;           // approval comments so far, "||"-separated
+    PredefinedTermsExist?: string;   // 'Yes' / 'No'
+    ItemTermHeadID?: number;
+    PreferredRemarks?: string;       // predefined terms, "|"-separated
     // close
     ClosingBalance?: number;
     POCloseDate?: string;

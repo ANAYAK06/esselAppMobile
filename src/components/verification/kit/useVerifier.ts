@@ -10,8 +10,8 @@ export function useVerifier() {
     return {
         roleId: String(roleId || ''),
         uid: String(userData?.uid || ''),
-        // The web posts userData.userName as Createdby / CreatedBy
-        userName: userData?.userName || userData?.firstName || 'system',
+        // The web posts userData.userName as Createdby / CreatedBy, falling back to 'system' (getCurrentUser)
+        userName: userData?.userName || 'system',
         roleCode: userData?.roleCode || '',
     };
 }

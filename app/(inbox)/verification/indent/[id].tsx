@@ -23,7 +23,7 @@ import {
     type IndentRole,
     type IndentRow,
 } from '@/src/api/verification/indentVerificationAPI';
-import type { StatusAction } from '@/src/api/verification/verificationCommonAPI';
+import { isSubmitted, type StatusAction } from '@/src/api/verification/verificationCommonAPI';
 import {
     ActionPanel, DetailHero, FieldGrid, RemarksTimeline, Section, money,
 } from '@/src/components/verification/kit/VerificationKit';
@@ -32,6 +32,7 @@ import { showDone } from '@/src/components/verification/kit/verificationEvents';
 import IndentItemCard, { isAssetItem, n } from '@/src/components/verification/indent/IndentItemCard';
 import StockSummaryBody from '@/src/components/verification/indent/StockSummaryBody';
 import TradeIssueBody from '@/src/components/verification/indent/TradeIssueBody';
+import AssetSerialBody from '@/src/components/verification/indent/AssetSerialBody';
 
 const ROLE_LABEL: Record<IndentRole, string> = {
     CSK: 'Stock Keeper (CSK)',
@@ -54,6 +55,8 @@ export default function IndentVerificationDetail() {
     const [reloadKey, setReloadKey] = useState(0);
 
     const [qtys, setQtys] = useState<Record<string, string>>({});
+    const [serials, setSerials] = useState<Record<string, string[]>>({});     // CSK asset items
+    const [tradeCodes, setTradeCodes] = useState<Record<string, string>>({}); // PUM trade issue
     const [checked, setChecked] = useState<Record<string, boolean>>({});
     const [pumType, setPumType] = useState('');
     const [pumCC, setPumCC] = useState('');
@@ -91,6 +94,8 @@ export default function IndentVerificationDetail() {
 
     const resetInputs = () => {
         setQtys({});
+        setSerials({});
+        setTradeCodes({});
         setChecked({});
     };
 
@@ -126,27 +131,63 @@ export default function IndentVerificationDetail() {
             return;
         }
         const act = actionOf(action);
-        const base = { Rowid: d.Rowid || '', Indentno: row.Indentno, Remarks: note, Appstatus: act, RoleID: roleId, Createdby: userName };
+        // C# Indent model names: Rowid → @Rid/@Nids/@Newids, Remarks → @AprovalRemarks, Appstatus → @Action
+        const base = { Rowid: d.Rowid || '', Indentno: row.Indentno, Remarks: note, Appstatus: act, RoleID: String(roleId), Createdby: userName };
         let payload: Record<string, unknown> = base;
 
-        const nonAsset = items.filter((it) => !isAssetItem(it));
-        const totalIssued = role === 'CSK' || role === 'PUM' ? nonAsset.reduce((s, it) => s + n(qtys[it.IndentListId]), 0) : 0;
+        // Old (CSK) / new (PUM) stock issued — an Approve with any hands over to the Issue page on the web
+        const totalIssued = role === 'CSK' || role === 'PUM'
+            ? items.filter((it) => !isAssetItem(it)).reduce((s, it) => s + n(qtys[it.IndentListId]), 0)
+            : 0;
 
-        if ((role === 'CSK' || role === 'PUM') && act === 'Verify') {
-            payload = {
-                ...base,
-                // Rowid carries the comma-separated IndentListIds at CSK / PUM
-                Rowid: nonAsset.map((it) => `${it.IndentListId},`).join(''),
-                Qtys: nonAsset.map((it) => `${n(qtys[it.IndentListId])},`).join(''),
-                Basics: nonAsset.map((it) => `${n(it.BasicPrice)},`).join(''),
-                Amts: nonAsset.map((it) => `${(n(it.BasicPrice) * Math.max(0, n(it.Quantity) - n(qtys[it.IndentListId]))).toFixed(2)},`).join(''),
-                TotalQtys: String(totalIssued),
-                ...(role === 'PUM' ? { FromCC: pumCC } : {}),
-            };
+        // Legacy ApproveindentDetails builds these lists for EVERY action at CSK / PUM. Non-asset rows:
+        // id / qty / basic / amount (+ trade item code at PUM); asset rows: basic / amount once, the id
+        // repeated per picked serial, serials appended to Newassetitemcode. PUM amounts also deduct the
+        // qty already issued.
+        if (role === 'CSK' || role === 'PUM') {
+            const isPUM = role === 'PUM';
+            let Rowid = '', Qtys = '', Basics = '', Amts = '', Newassetitemcode = '', TradeItemCode = '';
+            let TotalQtys = 0;
+            items.forEach((it) => {
+                const basic = n(it.BasicPrice);
+                const raised = n(it.Quantity);
+                const prevIssued = isPUM ? n(it.IssuedQty) : 0;
+                if (!isAssetItem(it)) {
+                    const issued = n(qtys[it.IndentListId]);
+                    const amount = basic * (raised - prevIssued - issued);
+                    Rowid += `${it.IndentListId},`;
+                    Qtys += `${issued},`;
+                    Basics += `${basic},`;
+                    Amts += `${isPUM ? amount.toFixed(2) : amount},`;
+                    TotalQtys += issued;
+                    if (isPUM) TradeItemCode += `${tradeCodes[it.IndentListId] || ''},`;
+                } else {
+                    const codes = serials[it.IndentListId] || [];
+                    Basics += `${basic},`;
+                    Amts += `${basic * (raised - prevIssued - codes.length)},`;
+                    TotalQtys += codes.length;
+                    if (codes.length > 0) Newassetitemcode += `${codes.join(',')},`;
+                    codes.forEach(() => { Rowid += `${it.IndentListId},`; });
+                }
+            });
+            if (isPUM) {
+                // An issue quantity needs the "Issue From" CC, and a picked CC needs a quantity
+                if (TotalQtys > 0 && !pumCC) return Alert.alert('Please Select New Stock Issue From Cost Center Code');
+                if (TotalQtys === 0 && pumCC) return Alert.alert('Invalid Qty');
+            }
+            payload = { ...base, Rowid, Qtys, Basics, Amts, TotalQtys: String(TotalQtys), Newassetitemcode };
+            if (isPUM) {
+                payload.FromCC = pumCC || '';
+                payload.TradeItemCode = TradeItemCode;
+            }
         }
 
         try {
-            await verifyIndent(payload);
+            const status = await verifyIndent(payload);
+            if (!isSubmitted(status)) {
+                Alert.alert('Not submitted', status || 'Error Occurred While Verification');
+                return;
+            }
             // On the web an Approve with issued qty jumps to Old / New Stock Issue — not in the app yet
             const next = act === 'Approve' && totalIssued > 0
                 ? `\n\nNext: issue the stock from ${role === 'CSK' ? 'Old Stock Issue' : 'New Stock Issue'} on the Corex web app.`
@@ -157,7 +198,10 @@ export default function IndentVerificationDetail() {
         }
     };
 
-    const tradeCleared = () => setQtys((p) => Object.fromEntries(Object.keys(p).map((k) => [k, '0'])));
+    const tradeCleared = () => {
+        setQtys((p) => Object.fromEntries(Object.keys(p).map((k) => [k, '0'])));
+        setTradeCodes({});
+    };
 
     return (
         <PortalScreen
@@ -249,6 +293,19 @@ export default function IndentVerificationDetail() {
                                         onToggle={() => setChecked((p) => ({ ...p, [it.IndentListId]: !p[it.IndentListId] }))}
                                         issuedQty={qtys[it.IndentListId] ?? '0'}
                                         onQtyChange={(v) => changeQty(it, v)}
+                                        serialCount={serials[it.IndentListId]?.length ?? 0}
+                                        onSerials={role === 'CSK' && isAssetItem(it) ? () => openSheet({
+                                            title: 'Asset serials',
+                                            subtitle: row.Costcenter,
+                                            body: (
+                                                <AssetSerialBody
+                                                    item={it}
+                                                    ccCode={row.Costcenter || ''}
+                                                    initial={serials[it.IndentListId] ?? []}
+                                                    onChange={(codes) => setSerials((p) => ({ ...p, [it.IndentListId]: codes }))}
+                                                />
+                                            ),
+                                        }) : undefined}
                                         onStock={() => openSheet({
                                             title: 'Stock summary',
                                             subtitle: row.Costcenter,
@@ -265,7 +322,10 @@ export default function IndentVerificationDetail() {
                                                     tradeCC={pumCC}
                                                     indentId={String(d?.MOID ?? '')}
                                                     userName={userName}
-                                                    onIssued={(q) => setQtys((p) => ({ ...p, [it.IndentListId]: String(q) }))}
+                                                    onIssued={(q, tradeCode) => {
+                                                        setQtys((p) => ({ ...p, [it.IndentListId]: String(q) }));
+                                                        setTradeCodes((p) => ({ ...p, [it.IndentListId]: tradeCode || '' }));
+                                                    }}
                                                     onAllCleared={tradeCleared}
                                                     onClose={() => setSheetOpen(false)}
                                                 />
@@ -293,7 +353,7 @@ export default function IndentVerificationDetail() {
                     <ActionPanel
                         moid={moid || null}
                         roleId={roleId}
-                        chkAmt={n(row.ChkAmt)}
+                        chkAmt={row.MOID || row.Moid ? n(row.ChkAmt) : 0}   // the web asks with 0 when the MOID came from the detail
                         showReturn
                         confirmLabel="I have reviewed this indent request — items, quantities and cost centre are correct"
                         onSubmit={submit}

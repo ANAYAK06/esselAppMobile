@@ -9,9 +9,9 @@ import { money } from '../kit/VerificationKit';
 
 const num = (v: unknown) => parseFloat(String(v ?? 0)) || 0;
 
-type Props = { itemCode: string; itemName?: string; currentPrice: number; quotedPrice?: number | string };
+type Props = { itemCode: string; itemName?: string; currentPrice: number; standardPrice?: number; quotedPrice?: number | string };
 
-export default function PreviousPurchasesBody({ itemCode, itemName, currentPrice, quotedPrice }: Props) {
+export default function PreviousPurchasesBody({ itemCode, itemName, currentPrice, standardPrice, quotedPrice }: Props) {
     const load = useCallback(() => getPreviousPurchases(itemCode), [itemCode]);
     const { data, loading } = useApiData(load);
     const rows = data ?? [];
@@ -25,6 +25,12 @@ export default function PreviousPurchasesBody({ itemCode, itemName, currentPrice
                     <Text className="text-[10px] text-gray-500">Current price</Text>
                     <Text className="text-sm font-bold text-brand-navy">{money(currentPrice)}</Text>
                 </View>
+                {standardPrice != null ? (
+                    <View className="flex-1 rounded-lg bg-gray-50 p-2.5">
+                        <Text className="text-[10px] text-gray-500">Standard price</Text>
+                        <Text className="text-sm font-bold text-gray-800">{money(standardPrice)}</Text>
+                    </View>
+                ) : null}
                 <View className="flex-1 rounded-lg bg-gray-50 p-2.5">
                     <Text className="text-[10px] text-gray-500">Quoted price</Text>
                     <Text className="text-sm font-bold text-gray-800">{money(quotedPrice)}</Text>

@@ -132,7 +132,11 @@ export interface StockSummaryRow {
 export const getItemStockSummary = (itemCode: string, ccCode: string) =>
     list<StockSummaryRow>('Purchase/IndentItemcodeSummaryPopup', { Itemcode: itemCode, CCcode: ccCode });
 
-// Returns nothing useful — success is "no error" (web submitIndentVerification)
+// CSK asset item serials available to issue from old stock
+export const getAssetSerials = (itemCode: string, ccCode: string) =>
+    list<{ ItemId?: string | number; Itemtext?: string }>('Purchase/GETAssetItemcodes', { itemcode: itemCode, For: 'CSK', cccode: ccCode });
+
+// spVerifyIndent answers "Submitted" on success; anything else is the SP's message
 export const verifyIndent = (payload: Record<string, unknown>) => send('put', 'Purchase/VerifyIndent', payload);
 
 // ---- PUM trade (5-series) items ----------------------------------------------------------

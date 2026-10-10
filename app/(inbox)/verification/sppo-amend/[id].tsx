@@ -1,6 +1,7 @@
 // SPPO Amendment verification — value summary, amended service lines, original vs amended terms,
-// documents, then verify / approve (web: pages/SPPO/VerifySPPOAmend.jsx). The web posts the
-// approval-comment trail itself as ApprovalNote.
+// documents, then verify / approve (web: pages/SPPO/VerifySPPOAmend.jsx). Payload = legacy
+// ApproveSPPOAmend: ApprovalNote is this verifier's note only, Terms the amendment's own terms each
+// followed by '|'. Return is dropped from the actions, as on the web.
 import React, { useCallback, useState } from 'react';
 import { Text, Alert } from 'react-native';
 import { router, type Href } from 'expo-router';
@@ -15,7 +16,7 @@ import {
     type SPPOAmendDetail,
     type SPPOAmendRow,
 } from '@/src/api/verification/sppoVerificationAPI';
-import { appendApprovalComment, type StatusAction } from '@/src/api/verification/verificationCommonAPI';
+import { isSubmitted, type StatusAction } from '@/src/api/verification/verificationCommonAPI';
 import { buildSPPOAmendUrl, getFileName } from '@/src/service/s3Config';
 import {
     ActionPanel, DetailHero, DocumentLinks, FieldGrid, RemarksTimeline, Section, money, showSubmitResult,
@@ -35,7 +36,7 @@ const Terms = ({ title, text }: { title: string; text?: string }) =>
 
 export default function SPPOAmendDetailScreen() {
     const row = useRowParam<SPPOAmendRow>();
-    const { roleId, uid, userName, roleCode } = useVerifier();
+    const { roleId, uid, userName } = useVerifier();
     const [reloadKey, setReloadKey] = useState(0);
 
     const load = useCallback(() => getSPPOAmendDetail(roleId, row!.AmendId, uid), [row, roleId, uid, reloadKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -58,12 +59,17 @@ export default function SPPOAmendDetailScreen() {
                 RoleId: roleId,
                 Action: action.value || action.text || action.type,
                 CreatedBy: userName,
-                ApprovalNote: appendApprovalComment(x.ApprovalNote || '', roleCode || 'SPPO Amendment Verifier', userName, note),
+                ApprovalNote: note,
                 AmendAmount: x.AmendAmount || row.AmendAmount || 0,
                 SubstractAmount: x.SubstractAmount || row.SubstractAmount || 0,
-                Terms: x.Terms || row.Terms || '',
+                Terms: String(x.Terms || row.Terms || '').split('|').map((t) => t.trim()).filter(Boolean).map((t) => `${t}|`).join(''),
             });
-            showSubmitResult(status && !status.includes('$') ? status : `${action.text} completed successfully`, status, () => router.back());
+            // spApproveSPPOAmend answers "Submited"; anything else is the error text
+            if (!isSubmitted(status)) {
+                Alert.alert('Not submitted', status || 'Error Occurred While SPPO Amend Verification');
+                return;
+            }
+            showSubmitResult(`${action.text} completed successfully`, status, () => router.back());
         } catch (e: any) {
             Alert.alert('Error', e?.response?.data?.Message || e?.message || `Failed to ${action.text.toLowerCase()}`);
         }
@@ -146,7 +152,7 @@ export default function SPPOAmendDetailScreen() {
                         moid={d.MOID}
                         roleId={roleId}
                         chkAmt={num(d.AmendAmount)}
-                        showReturn
+                        showReturn={false}
                         confirmLabel="I have verified the SPPO amendment details — values, services, terms and documents"
                         onSubmit={submit}
                     />

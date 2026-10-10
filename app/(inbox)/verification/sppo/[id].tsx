@@ -1,5 +1,7 @@
 // SPPO verification — service lines with lower-only rate editing, tick every line, then
 // verify / approve (web: pages/SPPO/VerifySPPO.jsx). Return is not offered on this page.
+// The edited rates are only a check aid, as on the web: the payload is the fields legacy ApproveSPPO
+// posts, with the PO's stored terms / total (spApproveSPPO rewrites the terms on every action).
 import React, { useCallback, useState } from 'react';
 import { View, Text, Alert } from 'react-native';
 import { router, type Href } from 'expo-router';
@@ -8,17 +10,20 @@ import PortalScreen from '@/src/components/employee/PortalScreen';
 import { EmptyState, LoadingText } from '@/src/components/employee/PortalUI';
 import { useApiData } from '@/src/hooks/useApiData';
 import { approveSPPO, getSPPODetail, type SPPORow, type SPPOService } from '@/src/api/verification/sppoVerificationAPI';
-import { appendApprovalComment, type StatusAction } from '@/src/api/verification/verificationCommonAPI';
+import { isSubmitted, type StatusAction } from '@/src/api/verification/verificationCommonAPI';
 import {
-    ActionPanel, DetailHero, DocumentLinks, FieldGrid, RemarksTimeline, Section, money, showSubmitResult,
+    ActionPanel, DetailHero, DocumentLinks, FieldGrid, Notice, RemarksTimeline, Section, money, showSubmitResult,
 } from '@/src/components/verification/kit/VerificationKit';
 import { buildSPPOUrl } from '@/src/service/s3Config';
 import { useRowParam, useVerifier } from '@/src/components/verification/kit/useVerifier';
 import SPPOServiceCard, { num } from '@/src/components/verification/sppo/SPPOServiceCard';
 
+// "a| b |" → "a|b|" — terms re-joined with a trailing '|' like legacy
+const joinTerms = (v?: string) => String(v || '').split('|').map((t) => t.trim()).filter(Boolean).map((t) => `${t}|`).join('');
+
 export default function SPPODetailScreen() {
     const row = useRowParam<SPPORow>();
-    const { roleId, uid, userName, roleCode } = useVerifier();
+    const { roleId, userName } = useVerifier();
     const [reloadKey, setReloadKey] = useState(0);
     const [rates, setRates] = useState<Record<number, string>>({});
     const [checked, setChecked] = useState<Record<number, boolean>>({});
@@ -49,28 +54,30 @@ export default function SPPODetailScreen() {
             Alert.alert('Please verify all services', `${checkedCount}/${services.length} services verified.`);
             return;
         }
-        const act = action.value || action.type;
-        const payload: Record<string, unknown> = {
-            SPPONo: row.SPPONo,
-            ApprovalNote: note,
-            Remarks: appendApprovalComment(d.ApprovedUser, roleCode || 'SPPO Verifier', userName, note),
-            Action: act,
-            RoleId: roleId,
-            Userid: uid,
+        const predefinedExist = d.PredefinedTermsExist || 'No';
+        const payload = {
             VendorCode: d.VendorCode || row.VendorCode,
             CCCode: d.CCCode || row.CCCode,
-            AmendId: 0,
-            Createdby: userName,
-            Amount: total,
-            ApprovalStatus: act,
-            ...(d.MOID ? { MOID: d.MOID } : {}),
-            ...(d.SPPOId ? { SPPOId: d.SPPOId } : {}),
-            ...(d.ItemDescList ? {
-                ItemDescList: d.ItemDescList.map((s, i) => ({ ...s, Rate: rateOf(s, i), Amount: rateOf(s, i) * num(s.Quantity) })),
-            } : {}),
+            DCACode: d.DCACode,
+            SPPOStartDate: d.SPPOStartDate,
+            TotalValue: d.TotalValue,
+            Remarks: joinTerms(d.Remarks),
+            Action: action.value || action.type,
+            ApprovalNote: note,
+            SPPONo: row.SPPONo,
+            PredefinedTermsExist: predefinedExist,
+            ItemTermHeadID: predefinedExist === 'Yes' ? (d.ItemTermHeadID || 0) : 0,
+            PreferredRemarks: predefinedExist === 'Yes' ? joinTerms(d.PreferredRemarks) : '',
+            RoleId: roleId,
+            CreatedBy: userName,
         };
         try {
             const status = await approveSPPO(payload);
+            // spApproveSPPO answers "Submited"; anything else is the error text
+            if (!isSubmitted(status)) {
+                Alert.alert('Not submitted', status || 'Error Occurred While Serivice Provider Verification');
+                return;
+            }
             showSubmitResult(`${action.text} completed successfully`, status, () => router.back());
         } catch (e: any) {
             Alert.alert('Error', e?.response?.data?.Message || e?.message || `Failed to ${action.text.toLowerCase()}`);
@@ -152,8 +159,21 @@ export default function SPPODetailScreen() {
                         )}
                     </Section>
 
+                    {d.Remarks ? (
+                        <Section title="SPPO terms & conditions">
+                            {d.Remarks.split('|').filter((t) => t.trim()).map((t, i) => (
+                                <Text key={i} className="text-xs text-gray-700 leading-5">• {t.trim()}</Text>
+                            ))}
+                        </Section>
+                    ) : null}
+
                     <RemarksTimeline trno={row.SPPONo} moid={d.MOID} />
-                    <ActionPanel moid={d.MOID} roleId={roleId} chkAmt={originalTotal} showReturn={false} onSubmit={submit} />
+                    {/* A returned SPPO (status 0) opens the edit form for the raiser on the web */}
+                    {String(row.Status) === '0' ? (
+                        <Notice tone="amber" title="Returned SPPO" text="This SPPO was returned for changes. Edit and resubmit it from the Corex web app." />
+                    ) : (
+                        <ActionPanel moid={d.MOID} roleId={roleId} chkAmt={num(d.TotalValue)} showReturn={false} onSubmit={submit} />
+                    )}
                 </>
             )}
         </PortalScreen>

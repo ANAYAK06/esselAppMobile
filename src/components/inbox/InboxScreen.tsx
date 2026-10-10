@@ -21,6 +21,7 @@ import {
 import { brand } from '@/src/theme/colors';
 import { getNotificationIcon } from './Utils/notificationUtils';
 import { inboxRouteFor } from './inboxRoutes';
+import { setOpenInboxItem } from './openInboxItem';
 
 const MAX_CC_CHIPS = 4;
 
@@ -111,6 +112,7 @@ export default function InboxScreen() {
     const openModule = (item: NotificationsSummaryItem) => {
         const route = inboxRouteFor(item);
         if (route) {
+            setOpenInboxItem(item);
             router.push(route.href as Href);
         } else {
             Alert.alert(

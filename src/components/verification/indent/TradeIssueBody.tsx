@@ -21,7 +21,7 @@ type Props = {
     tradeCC: string;             // PUM "Issue From CC"
     indentId: string;            // the web sends the indent detail's MOID here
     userName: string;
-    onIssued: (qty: number) => void;
+    onIssued: (qty: number, tradeItemCode?: string) => void;   // the saved trade item code is posted at PUM
     onAllCleared: () => void;
     onClose: () => void;
 };
@@ -61,7 +61,7 @@ export default function TradeIssueBody({ item, costcenter, tradeCC, indentId, us
         const [status, ref] = result.split(',');
         if (status === 'Submited') {
             Alert.alert('Trade item issued', ref ? `Ref: ${ref}` : undefined);
-            onIssued(parseFloat(shownQty) || 0);
+            onIssued(parseFloat(shownQty) || 0, selected);
             onClose();
         } else {
             Alert.alert('Save failed', result || 'The server returned no confirmation.');

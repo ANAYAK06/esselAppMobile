@@ -31,16 +31,18 @@ type Props = {
     onQtyChange: (value: string) => void;
     onStock: () => void;
     onTrade?: () => void;
+    serialCount?: number;            // CSK asset item: serials picked to issue
+    onSerials?: () => void;
 };
 
-export default function IndentItemCard({ item, index, role, checked, onToggle, issuedQty, onQtyChange, onStock, onTrade }: Props) {
+export default function IndentItemCard({ item, index, role, checked, onToggle, issuedQty, onQtyChange, onStock, onTrade, serialCount = 0, onSerials }: Props) {
     const asset = isAssetItem(item);
     const raised = n(item.Quantity);
     const basic = n(item.BasicPrice);
     const editable = (role === 'CSK' || role === 'PUM') && !asset;
     const pumNoStock = role === 'PUM' && n(item.AvailableQty) === 0;
-    // CSK shows what is still to be bought after issuing from old stock
-    const amount = role === 'CSK' ? basic * Math.max(0, raised - n(issuedQty)) : n(item.sumamt || item.Amount);
+    // CSK shows what is still to be bought after issuing from old stock (asset: per picked serial)
+    const amount = role === 'CSK' ? basic * Math.max(0, raised - (asset ? serialCount : n(issuedQty))) : n(item.sumamt || item.Amount);
 
     return (
         <View className={`rounded-xl border p-3 mb-2.5 ${checked ? 'border-green-300 bg-green-50/40' : 'border-gray-200 bg-white'}`}>
@@ -108,6 +110,12 @@ export default function IndentItemCard({ item, index, role, checked, onToggle, i
                             className={`w-24 px-2.5 py-1.5 rounded-lg border text-right text-sm ${pumNoStock ? 'border-gray-200 bg-gray-100 text-gray-400' : 'border-orange-300 bg-white text-gray-900'}`}
                         />
                     </View>
+                ) : role === 'CSK' && asset && onSerials ? (
+                    <TouchableOpacity onPress={onSerials} className="px-2.5 py-1.5 rounded-lg border border-orange-300 bg-white">
+                        <Text className="text-[11px] font-semibold text-orange-700">
+                            {serialCount ? `${serialCount} / ${Math.max(1, Math.floor(raised))} serials` : 'Select serials'}
+                        </Text>
+                    </TouchableOpacity>
                 ) : (role === 'CSK' || role === 'PUM') && asset ? (
                     <Text className="text-[10px] italic text-gray-400">Asset item</Text>
                 ) : null}

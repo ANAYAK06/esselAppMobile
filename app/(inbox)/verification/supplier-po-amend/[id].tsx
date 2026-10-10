@@ -1,9 +1,11 @@
 // Supplier PO Amendment verification — value breakdown, amended lines, documents, then
-// verify / approve (web: pages/SupplierPO/VerifySupplierPOAmend.jsx). Read-only: the amended
-// purchase price / amount are sent back as both the current and the "new" values, as on the web.
+// verify / approve (web: pages/SupplierPO/VerifySupplierPOAmend.jsx). The purchase price of 'New'
+// items can be lowered; the payload is the web's port of legacy CountSupplierPOAmount() +
+// ApproveSupplierPOAmend(): budget plus / minus and PO values recomputed from the rows, item lists
+// carrying only 'New' rows, Remarks = this verifier's note. Return is dropped, as on the web.
 import React, { useCallback, useState } from 'react';
-import { View, Text, Alert } from 'react-native';
-import { router, type Href } from 'expo-router';
+import { View, Text, TextInput, Alert } from 'react-native';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { FileDiff } from 'lucide-react-native';
 import PortalScreen from '@/src/components/employee/PortalScreen';
 import { EmptyState, LoadingText } from '@/src/components/employee/PortalUI';
@@ -12,9 +14,10 @@ import {
     approveSupplierPOAmend,
     getPOUploadedDocs,
     getSupplierPOAmendDetail,
+    type SupplierPOAmendItem,
     type SupplierPOAmendRow,
 } from '@/src/api/verification/supplierPOVerificationAPI';
-import { appendApprovalComment, type StatusAction } from '@/src/api/verification/verificationCommonAPI';
+import { isSubmitted, type StatusAction } from '@/src/api/verification/verificationCommonAPI';
 import { buildSupplierPOAmendUrl, buildSupplierPOUrl, getFileName } from '@/src/service/s3Config';
 import {
     ActionPanel, DetailHero, DocumentLinks, FieldGrid, RemarksTimeline, Section, money, showSubmitResult,
@@ -23,11 +26,15 @@ import { useRowParam, useVerifier } from '@/src/components/verification/kit/useV
 
 const num = (v: unknown) => parseFloat(String(v ?? 0)) || 0;
 const isSubtract = (t?: string) => (t || '').toLowerCase() === 'substract';
+const round2 = (v: number) => Math.round(v * 100) / 100;
+const isNewItem = (it: SupplierPOAmendItem) => String(it.ItemType || '').trim() === 'New';
 
 export default function SupplierPOAmendDetailScreen() {
     const row = useRowParam<SupplierPOAmendRow>();
-    const { roleId, userName, roleCode } = useVerifier();
+    const { ccType } = useLocalSearchParams<{ ccType?: string }>();
+    const { roleId, userName } = useVerifier();
     const [reloadKey, setReloadKey] = useState(0);
+    const [priceEdits, setPriceEdits] = useState<Record<string, string>>({});   // by IndentListId, 'New' items only
 
     const load = useCallback(() => getSupplierPOAmendDetail(row!), [row, reloadKey]); // eslint-disable-line react-hooks/exhaustive-deps
     const { data: d, loading } = useApiData(row ? load : null);
@@ -35,39 +42,106 @@ export default function SupplierPOAmendDetailScreen() {
     const docs = useApiData(row ? loadDocs : null).data ?? [];
     const items = d?.lstItems ?? [];
 
+    // Purchase price / amount after the verifier's edit ('New' items only)
+    const effPrice = (it: SupplierPOAmendItem) => {
+        const k = String(it.IndentListId);
+        return isNewItem(it) && priceEdits[k] !== undefined ? num(priceEdits[k]) : num(it.POPurchasePrice);
+    };
+    const effAmount = (it: SupplierPOAmendItem) => {
+        const k = String(it.IndentListId);
+        return isNewItem(it) && priceEdits[k] !== undefined ? round2(num(it.AmendQty) * effPrice(it)) : num(it.Amount);
+    };
+    const changePrice = (it: SupplierPOAmendItem, value: string) => {
+        if (value !== '' && !/^\d*\.?\d{0,2}$/.test(value)) return;
+        const k = String(it.IndentListId);
+        if (value !== '' && num(value) > num(it.POPurchasePrice)) {
+            Alert.alert('Your Are Not Able To Increase Purchase Price');
+            setPriceEdits((p) => ({ ...p, [k]: String(it.POPurchasePrice ?? '') }));
+            return;
+        }
+        setPriceEdits((p) => ({ ...p, [k]: value }));
+    };
+
     const submit = async (action: StatusAction, note: string) => {
         if (!row || !d) return;
+        if (items.some((it) => isNewItem(it) && !(effPrice(it) > 0))) {
+            Alert.alert('Enter Purchase Price For New Items');
+            return;
+        }
+
+        let plusTotal = 0, minusTotal = 0, poPlusAmt = 0, poMinusAmt = 0, newPurchaseTotal = 0;
+        let ids = '', itemcodes = '', oldPurchasePrices = '', newPurchasePrices = '', newPurchaseAmounts = '',
+            oldPurchaseAmounts = '', standardPrices = '', standardPriceAmounts = '';
+        items.forEach((it) => {
+            const itemType = String(it.ItemType || '').trim();
+            const amendType = String(it.AmendType || '').trim();
+            const qty = num(it.AmendQty);
+            const std = num(it.POStandardPrice);
+            const price = effPrice(it);
+            const stdAmt = qty * std;
+            const rowAmt = qty * price;
+
+            if ((itemType === 'New' && price > 0) || (itemType === 'Existing' && amendType === 'Add')) {
+                if (std < price) plusTotal += rowAmt - stdAmt;
+                else if (std > price) minusTotal += stdAmt - rowAmt;
+            } else if (itemType === 'Existing' && amendType === 'Substract') {
+                if (std < price) minusTotal += rowAmt - stdAmt;
+                else if (std > price) plusTotal += stdAmt - rowAmt;
+            }
+            if (amendType === 'Add') poPlusAmt += effAmount(it);
+            else if (amendType === 'Substract') poMinusAmt += effAmount(it);
+
+            if (itemType === 'New') {
+                ids += `${it.IndentListId},`;
+                itemcodes += `${String(it.itemcode || '').trim()},`;
+                oldPurchasePrices += `${it.POPurchasePrice},`;
+                newPurchasePrices += `${effPrice(it)},`;
+                newPurchaseAmounts += `${effAmount(it)},`;
+                oldPurchaseAmounts += `${it.Amount},`;
+                standardPrices += `${it.POStandardPrice},`;
+                standardPriceAmounts += `${it.OldAmount},`;
+                newPurchaseTotal += effAmount(it);
+            } else if (amendType === 'Add') {
+                newPurchaseTotal += effAmount(it);
+            }
+        });
+
+        const plus = round2(plusTotal);
+        const minus = round2(minusTotal);
         const payload = {
-            PONo: d.PONo || row.PONo,
+            PONo: d.PONo || row.PONo || '',
             AmendPONO: d.AmendPONO || row.AmendPONO || 0,
             RoleId: roleId,
             CreatedBy: userName,
             Action: action.value || action.text || action.type,
-            Remarks: appendApprovalComment(d.Remarks, roleCode || 'Supplier PO Amend Verifier', userName, note),
+            Remarks: note,
             IndentNo: d.IndentNo || row.IndentNo || '',
-            PlusAmount: d.PlusAmount || 0,
-            MinusAmount: d.MinusAmount || 0,
-            ReducedBudgetAmount: d.ReducedBudgetAmount || 0,
-            ReturnBudgetAmount: d.ReturnBudgetAmount || 0,
-            NewPurchasepriceTotal: d.NewPurchasepriceTotal || 0,
-            Itemcodes: items.map((it) => `${it.itemcode},`).join(''),
-            Indentlistids: items.map((it) => `${it.IndentListId},`).join(''),
-            Standardprices: items.map((it) => `${it.basicprice || 0},`).join(''),
-            StandardpriceAmts: items.map((it) => `${it.OldAmount || 0},`).join(''),
-            Purchaseprices: items.map((it) => `${it.POPurchasePrice || 0},`).join(''),
-            PurchasepriceAmts: items.map((it) => `${it.Amount || 0},`).join(''),
-            // The SP returns the amended price / amount as POPurchasePrice / Amount; with no price
-            // editing here, "new" equals the amended values
-            NewPurchaseprices: items.map((it) => `${it.POPurchasePrice || 0},`).join(''),
-            NewPurchasepriceAmts: items.map((it) => `${it.Amount || 0},`).join(''),
-            AmendDiffValue: d.AmendDiffValue || 0,
-            RevisedValue: d.RevisedValue || 0,
-            AddedPO: d.AddedPO || 0,
-            SubstractedPO: d.SubstractedPO || 0,
+            PlusAmount: plus,
+            MinusAmount: minus,
+            ReducedBudgetAmount: plus,
+            ReturnBudgetAmount: minus,
+            NewPurchasepriceTotal: newPurchaseTotal,
+            Itemcodes: itemcodes,
+            Indentlistids: ids,
+            Standardprices: standardPrices,
+            StandardpriceAmts: standardPriceAmounts,
+            Purchaseprices: oldPurchasePrices,
+            PurchasepriceAmts: oldPurchaseAmounts,
+            NewPurchaseprices: newPurchasePrices,
+            NewPurchasepriceAmts: newPurchaseAmounts,
+            AmendDiffValue: round2(Math.abs(poPlusAmt - poMinusAmt)),
+            RevisedValue: round2(num(d.OldPOValue) + poPlusAmt - poMinusAmt),
+            AddedPO: round2(poPlusAmt),
+            SubstractedPO: round2(poMinusAmt),
         };
         try {
             const status = await approveSupplierPOAmend(payload);
-            showSubmitResult(status && !status.includes('$') ? status : `${action.text} completed successfully`, status, () => router.back());
+            // spApproveSupplierPOAmend answers "Submited"; anything else is the error text
+            if (!isSubmitted(status)) {
+                Alert.alert('Not submitted', status || 'Error Occurred');
+                return;
+            }
+            showSubmitResult(`${action.text} completed successfully`, status, () => router.back());
         } catch (e: any) {
             Alert.alert('Error', e?.response?.data?.Message || e?.message || `Failed to ${action.text.toLowerCase()}`);
         }
@@ -78,8 +152,8 @@ export default function SupplierPOAmendDetailScreen() {
             title="Supplier PO Amendment"
             subtitle={row?.PONo}
             icon={FileDiff}
-            backHref={'/verification/supplier-po-amend/list' as Href}
-            onRefresh={() => setReloadKey((k) => k + 1)}
+            backHref={(ccType === 'NPCC' ? '/verification/supplier-po-amend/list?ccType=NPCC' : '/verification/supplier-po-amend/list') as Href}
+            onRefresh={() => { setPriceEdits({}); setReloadKey((k) => k + 1); }}
         >
             {!row ? (
                 <EmptyState title="Amendment not found" subtitle="Go back and open it again from the list." />
@@ -139,7 +213,7 @@ export default function SupplierPOAmendDetailScreen() {
                                                 {it.specification ? <Text className="text-[11px] text-gray-500 mt-0.5">{it.specification}</Text> : null}
                                             </View>
                                             <View className="items-end">
-                                                <Text className="text-sm font-bold text-gray-900">{money(it.Amount)}</Text>
+                                                <Text className="text-sm font-bold text-gray-900">{money(effAmount(it))}</Text>
                                                 {it.OldAmount != null && num(it.OldAmount) !== num(it.Amount) ? (
                                                     <Text className="text-[10px] text-gray-400">was {money(it.OldAmount)}</Text>
                                                 ) : null}
@@ -162,9 +236,23 @@ export default function SupplierPOAmendDetailScreen() {
                                             </View>
                                         </View>
                                         <Text className="text-[11px] text-gray-500 mt-1.5">
-                                            Quoted {money(it.POQuotedPrice) || '₹0'} · Std {money(it.basicprice || it.POStandardPrice) || '₹0'} · Purchase {money(it.POPurchasePrice) || '₹0'}
+                                            Quoted {money(it.POQuotedPrice) || '₹0'} · Std {money(it.basicprice || it.POStandardPrice) || '₹0'}
+                                            {isNewItem(it) ? '' : ` · Purchase ${money(it.POPurchasePrice) || '₹0'}`}
                                             {it.CGSTPercent != null ? ` · CGST ${it.CGSTPercent}% · SGST ${it.SGSTPercent ?? 0}%` : ''}
+                                            {it.ItemType ? ` · ${it.ItemType}` : ''}
                                         </Text>
+                                        {isNewItem(it) ? (
+                                            <View className="flex-row items-center justify-between mt-2">
+                                                <Text className="text-[11px] text-gray-500">Purchase price (new item, lower only)</Text>
+                                                <TextInput
+                                                    value={priceEdits[String(it.IndentListId)] ?? String(it.POPurchasePrice ?? '')}
+                                                    onChangeText={(v) => changePrice(it, v)}
+                                                    keyboardType="decimal-pad"
+                                                    selectTextOnFocus
+                                                    className="w-28 px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white text-right text-sm text-gray-900"
+                                                />
+                                            </View>
+                                        ) : null}
                                         {it.ItemRemark ? <Text className="text-[11px] text-gray-500 mt-0.5">{it.ItemRemark}</Text> : null}
                                     </View>
                                 );
@@ -191,8 +279,8 @@ export default function SupplierPOAmendDetailScreen() {
                     <ActionPanel
                         moid={d.MOID}
                         roleId={roleId}
-                        chkAmt={num(d.RevisedValue)}
-                        showReturn
+                        chkAmt={0}
+                        showReturn={false}
                         confirmLabel="I have verified this Supplier PO amendment — quantity / price changes, value breakdown and documents"
                         onSubmit={submit}
                     />
