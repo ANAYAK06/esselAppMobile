@@ -283,7 +283,7 @@ export const STOCK_CONFIGS: Record<string, VerificationConfig> = {
         searchPlaceholder: 'Search by transfer no, indent, cost center…',
         queue: {
             route: 'Purchase/VerifyItemsTransferGrid',
-            params: ({ roleId, userId, path, category }) => ({ Roleid: roleId, Created: '', Userid: userId, CCType: itemsTransferCCType(path, category) }),
+            params: ({ roleId, userId, path, category }) => ({ Roleid: roleId, Created: String(userId), Userid: userId, CCType: itemsTransferCCType(path, category) }),
         },
         itemKey: (r) => r.ItId,
         card: {
@@ -382,7 +382,7 @@ export const STOCK_CONFIGS: Record<string, VerificationConfig> = {
         searchPlaceholder: 'Search by transfer no, cost center…',
         queue: {
             route: 'Purchase/VerifyItemsTransferIssueGrid',
-            params: ({ roleId, userId, path, category }) => ({ Roleid: roleId, Created: '', Userid: userId, CCType: itemsTransferCCType(path, category) }),
+            params: ({ roleId, userId, path, category }) => ({ Roleid: roleId, Created: String(userId), Userid: userId, CCType: itemsTransferCCType(path, category) }),
         },
         itemKey: (r) => r.ItId,
         card: { title: (r) => r.Refno, subtitle: (r) => `${r.FromCC || ''} → ${r.ToCC || ''}`, meta: (r) => r.Date },
@@ -438,7 +438,7 @@ export const STOCK_CONFIGS: Record<string, VerificationConfig> = {
         noun: 'stock conversion',
         icon: Combine,
         searchPlaceholder: 'Search by transaction, cost center, master item…',
-        queue: { route: 'Purchase/VerifyCapitalStockIssueGrid', params: ({ roleId, userId }) => ({ Roleid: roleId, Created: '', Userid: userId }) },
+        queue: { route: 'Purchase/VerifyCapitalStockIssueGrid', params: ({ roleId, userId }) => ({ Roleid: roleId, Created: String(userId), Userid: userId }) },
         itemKey: (r) => r.Rid || r.Tranno,
         card: {
             title: (r) => r.Tranno,
@@ -491,7 +491,7 @@ export const STOCK_CONFIGS: Record<string, VerificationConfig> = {
         noun: 'stock updation',
         icon: PackagePlus,
         searchPlaceholder: 'Search by request no, cost center, date…',
-        queue: { route: 'Purchase/VerifyDirectStockUpdationGrid', params: ({ roleId, userId }) => ({ Roleid: roleId, Created: '', Userid: userId }) },
+        queue: { route: 'Purchase/VerifyDirectStockUpdationGrid', params: ({ roleId, userId }) => ({ Roleid: roleId, Created: String(userId), Userid: userId }) },
         itemKey: (r) => r.DirectStockUpdationId || r.RequestNo,
         card: { title: (r) => r.RequestNo, subtitle: (r) => r.RequestCC, meta: (r) => r.RequestDate, amount: (r) => money(r.Amount) },
         searchText: (r) => `${r.RequestNo} ${r.RequestCC} ${r.RequestDate} ${r.Amount}`,
@@ -548,7 +548,7 @@ export const STOCK_CONFIGS: Record<string, VerificationConfig> = {
         noun: 'store closing',
         icon: Store,
         searchPlaceholder: 'Search by cost center, type, date…',
-        queue: { route: 'Purchase/VerifyStoreClosingGrid', params: ({ roleId, userId }) => ({ Roleid: roleId, Created: '', Userid: userId }) },
+        queue: { route: 'Purchase/VerifyStoreClosingGrid', params: ({ roleId, userId }) => ({ Roleid: roleId, Created: String(userId), Userid: userId }) },
         itemKey: (r) => `${r.IId}|${r.Tranno}`,
         card: { title: (r) => r.CCCode, subtitle: (r) => r.ClosingType, meta: (r) => r.ClosingDate },
         searchText: (r) => `${r.CCCode} ${r.ClosingType} ${r.ClosingDate} ${r.Tranno}`,
@@ -671,7 +671,7 @@ export const STOCK_CONFIGS: Record<string, VerificationConfig> = {
         noun: 'asset sale',
         icon: HandCoins,
         searchPlaceholder: 'Search by request no, item code, date…',
-        queue: { route: 'Purchase/VerifyAssetSaleGrid', params: ({ roleId, userId }) => ({ Roleid: roleId, Created: '', Userid: userId }) },
+        queue: { route: 'Purchase/VerifyAssetSaleGrid', params: ({ roleId, userId }) => ({ Roleid: roleId, Created: String(userId), Userid: userId }) },
         itemKey: (r) => `${r.RequestNo}|${r.ItemId}`,
         card: { title: (r) => r.RequestNo, subtitle: (r) => r.ItemCode, meta: (r) => r.RequestDate, amount: (r) => money(r.Amount) },
         searchText: (r) => `${r.RequestNo} ${r.ItemCode} ${r.RequestDate} ${r.Amount}`,
@@ -723,7 +723,7 @@ export const STOCK_CONFIGS: Record<string, VerificationConfig> = {
         noun: 'receipt',
         icon: ReceiptText,
         searchPlaceholder: 'Search by transaction, request no, item code…',
-        queue: { route: 'Purchase/VerifyAssetSaleReceiptGrid', params: ({ roleId, userId }) => ({ Roleid: roleId, Created: '', Userid: userId }) },
+        queue: { route: 'Purchase/VerifyAssetSaleReceiptGrid', params: ({ roleId, userId }) => ({ Roleid: roleId, Created: String(userId), Userid: userId }) },
         itemKey: (r) => `${r.Refno}|${r.IId}`,
         card: {
             title: (r) => r.Refno,
