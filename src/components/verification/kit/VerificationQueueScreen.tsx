@@ -43,7 +43,7 @@ export default function VerificationQueueScreen<T>({ title, icon, noun, searchPl
     }), [keyOf]);
 
     const loader = useCallback(() => load(roleId, uid, userName), [load, roleId, uid, userName, reloadKey]); // eslint-disable-line react-hooks/exhaustive-deps
-    const { data, loading, error } = useApiData(roleId ? loader : null);
+    const { data, loading, error, errorMessage } = useApiData(roleId ? loader : null);
     // Kept hidden even if a reload still returns it (the server can lag behind the action)
     const rows = (data ?? []).filter((r) => !done.has(keyOf(r)));
 
@@ -65,7 +65,7 @@ export default function VerificationQueueScreen<T>({ title, icon, noun, searchPl
             {loading && !data ? (
                 <LoadingText />
             ) : error ? (
-                <EmptyState title="Could not load the list" subtitle="Pull down to try again." />
+                <EmptyState title="Could not load the list" subtitle={`${errorMessage || 'Request failed'}\n\nPull down to try again.`} />
             ) : shown.length === 0 ? (
                 <View className="pt-6">
                     <EmptyState

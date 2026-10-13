@@ -11,19 +11,21 @@ import DetailSheet, { type SheetContent } from '@/src/components/common/DetailSh
 import PortalScreen from '@/src/components/employee/PortalScreen';
 import { EmptyState, LoadingText, PrimaryButton } from '@/src/components/employee/PortalUI';
 import { DateField, FormField, SelectField, TextField } from '@/src/components/employee/FormControls';
-import { useApiData } from '@/src/hooks/useApiData';
+import { errorText, useApiData } from '@/src/hooks/useApiData';
 import { ACTION_DONE } from '@/src/components/verification/kit/actionText';
 import {
     ActionPanel, DetailHero, FieldGrid, Notice, RemarksTimeline, Section, type Field,
 } from '@/src/components/verification/kit/VerificationKit';
 import { useRowParam, useVerifier } from '@/src/components/verification/kit/useVerifier';
 import { showDone } from '@/src/components/verification/kit/verificationEvents';
+import { Alarm } from './parts';
 import { VERIFICATION_CONFIGS } from './configs';
 import { isOk, routeOf, type Ctx, type Rec, type ResubmitField, type VerificationConfig } from './types';
 
 const text = (v: unknown) => (v === null || v === undefined || v === false ? '' : String(v));
 
-// Config-level lookups + the record's own lookups, keyed by name (a failed lookup is null, as on the web)
+// Config-level lookups + the record's own lookups, keyed by name (a failed lookup is null, as on the web).
+// Failures are also listed so the screen can say which route broke and why
 const loadAux = async (config: VerificationConfig, row: Rec, record: Rec, ctx: Ctx) => {
     const jobs = [
         ...(config.aux || []).map((a) => [a.name, a.route, a.params ? a.params(ctx) : undefined] as const),
@@ -31,9 +33,13 @@ const loadAux = async (config: VerificationConfig, row: Rec, record: Rec, ctx: C
             .filter((a) => !a.when || a.when(row, record))
             .map((a) => [a.name, a.route, a.params(row, record, ctx)] as const),
     ];
+    const errors: string[] = [];
     const results = await Promise.all(jobs.map(([name, route, params]) =>
-        getRoute(route, params).then((body) => [name, dataOf(body) ?? null] as const).catch(() => [name, null] as const)));
-    return Object.fromEntries(results) as Rec;
+        getRoute(route, params).then((body) => [name, dataOf(body) ?? null] as const).catch((e) => {
+            errors.push(`${route}: ${errorText(e)}`);
+            return [name, null] as const;
+        })));
+    return { values: Object.fromEntries(results) as Rec, errors };
 };
 
 export default function ConfigDetail() {
@@ -69,7 +75,8 @@ export default function ConfigDetail() {
         [config, row, record, roleId, uid, userName, path, category, reloadKey], // eslint-disable-line react-hooks/exhaustive-deps
     );
     const auxState = useApiData(record && (config?.aux || config?.rowAux) ? loadAll : null);
-    const aux: Rec = auxState.data ?? {};
+    const aux: Rec = auxState.data?.values ?? {};
+    const auxErrors = auxState.data?.errors ?? [];
 
     const loadRemarks = useCallback(
         () => config!.remarks!(row!, record!),
@@ -216,7 +223,12 @@ export default function ConfigDetail() {
             ) : !record && detail.loading ? (
                 <LoadingText label={`Loading ${config.noun}…`} />
             ) : !record ? (
-                <EmptyState title="Details could not be loaded" subtitle="It may no longer be pending at your level. Pull down to try again." />
+                <EmptyState
+                    title="Details could not be loaded"
+                    subtitle={detail.errorMessage
+                        ? `${detail.errorMessage}\n\nPull down to try again.`
+                        : 'It may no longer be pending at your level. Pull down to try again.'}
+                />
             ) : (
                 <>
                     <DetailHero title={text(header!.title(row, record)) || '—'} amount={money} chips={chips} returned={returned} />
@@ -225,6 +237,7 @@ export default function ConfigDetail() {
                             <FieldGrid fields={s.fields.map((f) => (f ? [f[0], f[1] === null || f[1] === undefined ? null : text(f[1]), f[2]] : null) as Field)} />
                         </Section>
                     ))}
+                    {auxErrors.length ? <Alarm text={`Some details could not be loaded:\n${auxErrors.join('\n')}`} /> : null}
                     {config.extra && (!config.rowAux || auxState.data || !auxState.loading)
                         ? config.extra(row, record, { aux, ext, setExt, openSheet, reload, roleId, userId: uid, user: userName })
                         : config.extra ? <LoadingText /> : null}
