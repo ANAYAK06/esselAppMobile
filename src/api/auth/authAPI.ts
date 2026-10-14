@@ -1,6 +1,7 @@
 // src/api/securityAPI/authAPI.ts
 import axios from "axios";
 import { API_BASE_URL } from '@/src/service/apiConfig';
+import { CLIENT_HEADER, setTokenInfo, TokenInfo } from '@/src/service/authToken';
 
 // Without a timeout a hung request keeps the login sheet's buttons disabled indefinitely
 const AUTH_TIMEOUT_MS = 30000;
@@ -21,6 +22,11 @@ export interface ApiResponse<T> {
     Message: string;
     Data: T;
     ResponseCode?: number;
+}
+
+// Login responses also carry Token (access + refresh token) when the API has token login enabled
+export interface LoginResponse<T> extends ApiResponse<T> {
+    Token?: TokenInfo;
 }
 
 export interface EmployeeValidationData {
@@ -67,23 +73,25 @@ export const validateEmployee = async (credentials: AuthCredentials): Promise<Ap
         console.log('🔍 Sending to backend for:', backendPayload.Username); // DEBUG (never log the password)
         console.log('🌐 API URL:', `${API_BASE_URL}/Security/GetValidEmployee`); // DEBUG
 
-        const response = await axios.post<ApiResponse<EmployeeValidationData>>(
+        const response = await axios.post<LoginResponse<EmployeeValidationData>>(
             `${API_BASE_URL}/Security/GetValidEmployee`,
             backendPayload,
             {
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    ...CLIENT_HEADER,
                 },
                 timeout: AUTH_TIMEOUT_MS,
             }
         );
 
-        console.log('✅ API Success Response:', response.data); // DEBUG
+        // Keep the tokens (absent on servers without token login); never log the response - it holds them
+        await setTokenInfo(response.data?.Token);
+        console.log('✅ Employee login response, valid:', response.data?.Data?.isValidUser); // DEBUG
         return response.data;
     } catch (error: any) {
-        console.error('❌ API Error:', error.response || error);
-        console.error('❌ Error status:', error.response?.status);
-        console.error('❌ Error data:', error.response?.data);
+        // Status + server message only: the error's request config contains the password
+        console.error('❌ Employee login failed:', error.response?.status, error.response?.data?.Message ?? error.message);
 
         if (error.response?.data) {
             throw error.response.data;
@@ -105,21 +113,26 @@ export const validateUser = async (credentials: AuthCredentials): Promise<ApiRes
 
         console.log('🔍 Sending user validation to backend for:', backendPayload.Username); // DEBUG (never log the password)
 
-        const response = await axios.post<ApiResponse<UserValidationData>>(
+        const response = await axios.post<LoginResponse<UserValidationData>>(
             `${API_BASE_URL}/Security/GetValidUser`,
             backendPayload,
             {
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    ...CLIENT_HEADER,
                 },
                 timeout: AUTH_TIMEOUT_MS,
             }
         );
-        console.log('✅ Validated user data:', response.data);
+
+        // Role login returns a role token (UID / RoleId) that replaces the employee token
+        await setTokenInfo(response.data?.Token);
+        console.log('✅ Role login response, valid:', response.data?.Data?.isValidUser); // DEBUG
 
         return response.data;
     } catch (error: any) {
-        console.error('User Validation API Error:', error.response || error);
+        // Status + server message only: the error's request config contains the password
+        console.error('User Validation API Error:', error.response?.status, error.response?.data?.Message ?? error.message);
         if (error.response?.data) {
             throw error.response.data;
         }

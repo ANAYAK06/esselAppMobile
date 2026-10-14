@@ -7,6 +7,7 @@ import { Heart, KeyRound, Phone, ShieldCheck, User } from 'lucide-react-native';
 import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
 import { fetchMyPhoto } from '@/src/slice/hr/employeePortalSlice';
 import { updatePassword } from '@/src/api/hr/employeePortalAPI';
+import { validateEmployee } from '@/src/api/auth/authAPI';
 import { updateSavedPassword } from '@/src/service/quickLogin';
 import { useEmployee } from '@/src/hooks/useEmployee';
 import PortalScreen from '@/src/components/employee/PortalScreen';
@@ -32,6 +33,14 @@ function ChangePasswordCard({ username }: { username: string }) {
 
             // Keep PIN / Face ID sign-in working with the new password (no-op for another user's quick login)
             await updateSavedPassword(username, newPassword);
+
+            // The API ends every login session of this user when the password changes - sign in again
+            // with the new password to get fresh tokens and stay signed in on this phone.
+            try {
+                await validateEmployee({ employeeId: username, password: newPassword });
+            } catch {
+                // Not fatal: the password is changed; the user just signs in again when asked
+            }
 
             setNewPassword('');
             setConfirmPassword('');
