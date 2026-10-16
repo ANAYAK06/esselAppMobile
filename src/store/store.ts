@@ -8,6 +8,7 @@ import authReducer, { initialState as authInitialState } from '../slice/auth/aut
 import inboxNotificationReducer from '../slice/notifications/inboxNotificationsSlice'
 import employeePortalReducer from '@/src/slice/hr/employeePortalSlice'
 import rejectionAlertsReducer from '@/src/slice/notifications/rejectionAlertsSlice'
+import { authTokenMiddleware } from '@/src/store/authTokenMiddleware'
 // Request flags (loading / errors / success) are per-session: if one was saved mid-request
 // (app reloaded or killed), the login sheet came back with every button disabled for good.
 const authTransientFlags = createTransform<any, any, any, any>(
@@ -56,7 +57,7 @@ export const store = configureStore({
             // Additional middleware options
             immutableCheck: __DEV__,
             serializabilityCheck: __DEV__,
-        }),
+        }).concat(authTokenMiddleware),
     // Enable Redux DevTools in development
     devTools: __DEV__,
 });

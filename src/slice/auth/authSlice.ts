@@ -103,7 +103,7 @@ export const validateEmployee = createAsyncThunk<
 
             const response: ApiResponse<EmployeeValidationData> = await validateEmployeeAPI(credentials);
 
-            console.log('🎯 API Response received:', response);
+            // Never log the whole response: it carries the login tokens
             console.log('🎯 Response.Data:', response.Data);
             console.log('🎯 Response.Data.isValidUser:', response.Data?.isValidUser);
             console.log('🎯 IsSuccessful:', response.IsSuccessful);
@@ -162,7 +162,7 @@ export const validateUser = createAsyncThunk<
 
             const response: ApiResponse<UserValidationData> = await validateUserAPI(credentials);
 
-            console.log('🎯 User API Response:', response);
+            // Never log the whole response: it carries the login tokens
             console.log('🎯 User Data.isValidUser:', response.Data?.isValidUser);
             console.log('🎯 User Data.UserRoleId:', response.Data?.UserRoleId);
             console.log('🎯 User Data.FirstName:', response.Data?.FirstName);
