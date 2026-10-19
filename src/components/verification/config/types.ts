@@ -102,6 +102,10 @@ export interface VerificationConfig {
         payload: (row: Rec, d: Rec, x: { action: string; value: string; note: string; user: string; roleCode: string; roleId: string; userId: string; aux: Rec; ext: Rec; pre: Rec }) => Rec;
         ok?: string[] | ((status: string, row: Rec, d: Rec, body: any) => boolean);   // body = the raw response
         afterOk?: (status: string, row: Rec, d: Rec, x: { action: string }) => Promise<string | void>;   // returns an extra note
+        // A non-ok answer the verifier can override: fields to resubmit with (once), false = they declined
+        // (stop quietly), undefined = not overridable (show the error)
+        retry?: (status: string, row: Rec, d: Rec) => Promise<Rec | false | undefined>;
+        errorText?: (status: string) => string;                 // what to show for a non-ok answer
     };
 }
 

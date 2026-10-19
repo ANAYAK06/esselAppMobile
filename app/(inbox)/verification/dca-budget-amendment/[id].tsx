@@ -54,7 +54,14 @@ export default function DCAAmendmentDetail() {
                 RoleId: roleId,
                 Status: row.Status ?? '1',
             });
-            showSubmitResult(status && !status.includes('$') ? status : `${action.text} completed successfully`, status, () => router.back());
+            // spApproveDCABudgetAmend answers "Submited"; anything else ("Does Not Have Approval Permission",
+            // "Next Level Verification User Does Not Exist", an SQL error, or blank for Return, which it has no branch for)
+            // means nothing was saved
+            if (status.trim() !== 'Submited') {
+                Alert.alert('Not applied', status.trim() || 'The server returned no confirmation.');
+                return;
+            }
+            showSubmitResult(`${action.text} completed successfully`, '', () => router.back());
         } catch (e: any) {
             Alert.alert('Error', e?.response?.data?.Message || e?.message || 'Something went wrong');
         }
@@ -117,8 +124,8 @@ export default function DCAAmendmentDetail() {
                     <ActionPanel
                         moid={moid}
                         roleId={roleId}
-                        chkAmt={num(d?.AmendedValue)}
-                        showReturn
+                        chkAmt={0}   // legacy VerifyDCABudgetAmendView and the web ask for the status list with ChkAmt 0
+                        showReturn={false}   // spApproveDCABudgetAmend has no Return branch: a Return saves nothing
                         confirmLabel="I have verified all DCA amendment details"
                         onSubmit={submit}
                     />

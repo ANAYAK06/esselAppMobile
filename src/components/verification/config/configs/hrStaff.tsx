@@ -17,7 +17,7 @@
 //   StaffPayRevision  pages/HR/VerifyStaffPayRevision.jsx   (HRSlice/staffPayRevisionSlice, api/HRAPI/staffPayRevisionAPI)
 //   StaffRegistration pages/HR/VerifyStaffRegistration.jsx  (HRSlice/staffRegistrationVerifySlice, api/HRAPI/StaffRegistrationVerificationAPI)
 import React from 'react';
-import { Text } from 'react-native';
+import { Alert, Text } from 'react-native';
 import { ArrowRightLeft, Award, BadgeIndianRupee, Building2, CalendarCheck, CalendarDays, CreditCard, FileSpreadsheet, HandCoins, LogOut, ReceiptIndianRupee, Target, TrendingUp, UserPlus, Wallet } from 'lucide-react-native';
 import { AttendanceEditor, CTCBreakdown, PayRevisionBreakdown, PayrollEmployees, annualCTC, attendanceOf, staffName, staffRegistrationPayload } from './hrParts';
 import { appendApprovalComment } from '@/src/api/verification/verificationCommonAPI';
@@ -88,7 +88,9 @@ export const HR_STAFF_CONFIGS: Record<string, VerificationConfig> = {
         detail: { route: 'HR/GetHRAdvancePayData', params: (r) => ({ TransNo: r.TransactionRefNo, Emprefno: r.EmployeeID }) },
         moid: () => 364,
         remarksKey: (r) => r.TransactionRefNo || String(r.LTAId || ''),
-        showReturn: 'Yes',
+        // spApproveHRAdvancePayment has Reject / Verify / Approve branches only — a Return saves nothing
+        showReturn: 'No',
+        excludeActions: () => ['return'],
         confirmLabel: 'I have reviewed this advance payment request.',
         header: {
             title: (r, d) => d.EmployeName || r.EmployeName,
@@ -118,12 +120,16 @@ export const HR_STAFF_CONFIGS: Record<string, VerificationConfig> = {
         ],
         approve: {
             route: 'HR/ApproveHRAdvancePayment',
-            payload: (r, d, { value, note, user, roleId }) => ({
+            // Action is the chosen type, as legacy VerifyHRAdvancePaymentView posts it. (The web maps everything but Reject
+            // to 'Approve'; the SP's Approve branch pays out — debits the bank, marks the advance Paid — with no access
+            // check, so a Verify at an intermediate level must stay a Verify.)
+            payload: (r, d, { action, note, user, roleId }) => ({
                 EmpRefno: d.EmpRefno || r.EmployeeID, TransactionRefNo: d.TransactionRefNo, TransactionAmount: d.TransactionAmount,
-                Action: String(value).toLowerCase().includes('reject') ? 'Reject' : 'Approve', RoleID: roleId, BankId: d.BankId || 0,
+                Action: action, RoleID: roleId, BankId: d.BankId || 0,
                 Createdby: user, ApprovalNote: note, AdvanceTransNo: d.AdvanceTransNo || r.TransactionRefNo,
             }),
-            ok: ANY,
+            // "Submited"; otherwise "Insufficient bank balance", "Next Level Verification User Does Not Exist" or an SQL error
+            ok: ['Submited'],
         },
     },
 
@@ -321,7 +327,9 @@ export const HR_STAFF_CONFIGS: Record<string, VerificationConfig> = {
         detail: { route: 'HR/GetHRAdvanceRequestData', params: (r) => ({ TransNo: r.TransactionRefNo, Emprefno: r.EmployeeID || r.EmpRefno || '' }) },
         moid: (r, d) => Number(d.MOID || r.MOID) || null,
         remarksKey: (r, d) => String(d.TransactionRefNo || r.TransactionRefNo || ''),
-        showReturn: 'Yes',
+        // spApproveHRAdvanceRequest has Reject / Verify / Approve branches only — a Return saves nothing
+        showReturn: 'No',
+        excludeActions: () => ['return'],
         confirmLabel: 'I have verified the advance request details, eligibility and supporting documents.',
         header: {
             title: (r, d) => d.EmployeName || d.EmployeeName || r.EmployeName,
@@ -362,7 +370,8 @@ export const HR_STAFF_CONFIGS: Record<string, VerificationConfig> = {
                 EmpRefno: d.EmpRefno || r.EmployeeID || r.EmpRefno || '', TransactionRefNo: d.TransactionRefNo || r.TransactionRefNo || '',
                 Action: value, RoleID: roleId, Createdby: user, ApprovalNote: note,
             }),
-            ok: (s) => /submit/i.test(String(s || '')),
+            // "Submited"; otherwise "Access Denied", "Next Level Verification User Does Not Exist" or an SQL error
+            ok: ['Submited'],
         },
     },
 
@@ -392,7 +401,9 @@ export const HR_STAFF_CONFIGS: Record<string, VerificationConfig> = {
         },
         moid: (r, d) => d.MOID || 363,
         remarksKey: (r, d) => d.TransactionRefNo || r.TransactionRefNo || '',
-        showReturn: 'Yes',
+        // ApproveHRLeaveRequest (SP) has Reject / Verify / Approve branches only — a Return saves nothing
+        showReturn: 'No',
+        excludeActions: () => ['return'],
         confirmLabel: 'I have verified all leave request details.',
         header: {
             title: (r, d) => d.EmployeeName || r.EmployeeName,
@@ -420,16 +431,30 @@ export const HR_STAFF_CONFIGS: Record<string, VerificationConfig> = {
         ],
         approve: {
             route: 'HR/ApproveHRLeaveRequest',
-            payload: (r, d, { action, note, user, roleCode, roleId }) => ({
+            // As legacy VerifyHRLeaveRequestView: Note = this verifier's comment (the SP stores it as their remark);
+            // Remarks = the leave's own purpose, which Verify / Approve write back to the request
+            payload: (r, d, { action, note, user, roleId }) => ({
                 EmpRefNo: String(r.EmpRefNo || '').trim(), TransactionRefNo: String(d.TransactionRefNo || r.TransactionRefNo || '').trim(),
                 Roleid: parseInt(roleId, 10), Action: action,
-                // Note carries the approval trail; Remarks the verifier's own comment
-                Note: appendApprovalComment(d.Note || r.Note, roleCode || 'Leave Verifier', user, note),
+                Note: note,
                 CreatedBy: user, UserName: d.UserName || r.UserName || user, Noofleaves: parseInt(d.Noofleaves || r.Noofleaves || 0, 10),
                 LeaveTypeId: parseInt(d.LeaveTypeId || r.LeaveTypeId || 0, 10), JoiningCostCenter: d.JoiningCostCenter || r.JoiningCostCenter || '',
-                FromDate: d.FromDate || r.FromDate || '', ToDate: d.ToDate || r.ToDate || '', Remarks: note, SubmitAction: 'CheckLeaves',
+                FromDate: d.FromDate || r.FromDate || '', ToDate: d.ToDate || r.ToDate || '', Remarks: d.Remarks || r.Remarks || '',
+                SubmitAction: 'CheckLeaves',
             }),
-            ok: ANY,
+            // "Submited", else the date check ("Duplicate$…", "Attendance$…", "FurtureLeave$…") or the SP's message
+            ok: ['Submited'],
+            // Legacy: a future leave can be overridden — confirm, then resubmit skipping the date check
+            retry: async (status) => {
+                const [kind, message] = String(status || '').split('$');
+                if (kind !== 'FurtureLeave') return undefined;
+                const go = await new Promise<boolean>((resolve) => Alert.alert('Future leave exists', `${message || 'A future leave exists.'}\n\nDo you want to continue?`, [
+                    { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                    { text: 'Continue', onPress: () => resolve(true) },
+                ], { cancelable: false }));
+                return go ? { SubmitAction: 'Submit' } : false;
+            },
+            errorText: (status) => (String(status || '').split('$')[1] || status || '').trim(),
         },
     },
 
@@ -652,7 +677,10 @@ export const HR_STAFF_CONFIGS: Record<string, VerificationConfig> = {
         detail: { route: 'HR/GetAttendancebyTransactionNo', params: (r) => ({ TransNo: String(r.TransactionNo).trim() }) },
         moid: (r, d) => d.MOID || 362,
         remarksKey: (r, d) => d.TransactionNo || r.TransactionNo || '',
-        showReturn: 'Yes',
+        // spApproveStaffAttendance only has Verify / Approve branches; a Reject or Return still rewrites the
+        // attendance rows and then saves nothing, so they are not offered
+        showReturn: 'No',
+        excludeActions: () => ['return', 'reject'],
         confirmLabel: 'I have verified all attendance details.',
         header: {
             title: (r, d) => d.CCName || d.CostCenter || r.CCName || r.CostCenter,
@@ -668,22 +696,23 @@ export const HR_STAFF_CONFIGS: Record<string, VerificationConfig> = {
         extra: (r, d, { ext, setExt }) => <AttendanceEditor d={d} ext={ext} setExt={setExt} />,
         approve: {
             route: 'HR/ApproveStaffAttendance',
-            payload: (r, d, { action, note, user, roleCode, roleId, ext }) => {
+            payload: (r, d, { action, note, user, roleId, ext }) => {
                 const emps = list(d.CCEmplistforDate);
                 return {
                     TransactionNo: String(d.TransactionNo || r.TransactionNo || '').trim(), CostCenter: String(d.CostCenter || r.CostCenter || '').trim(),
                     AttendanceDate: String(d.AttendanceDate || r.AttendanceDate || '').trim(),
                     EmployeeIds: `${emps.map((e) => e.EmpId).join(',')},`, Attendancetypes: `${emps.map((e) => attendanceOf(e, ext)).join(',')},`,
                     RoleId: parseInt(roleId, 10), Createdby: user, Action: action,
-                    ApprovalNote: appendApprovalComment(d.ApprovalNote, roleCode || 'Attendance Verifier', user, note),
+                    // The SP appends "role : name : note|" to the record itself and stores @Note as this verifier's remark
+                    ApprovalNote: note,
                 };
             },
             ok: (s) => String(s || '').split('$')[0].trim().toLowerCase() === 'submited',
         },
     },
 
-    // Detail is a POST; the web falls back to MOID 183. NB the web posts no Action for this approval (the SP decides);
-    // the phone adds the chosen Action so a Reject is not sent as a plain submit.
+    // Detail is a POST; the web falls back to MOID 183. spApproveMonthAttendance never receives an Action: whatever
+    // is pressed, it approves the sheet. Reject / Return would therefore approve it, so they are not offered.
     ExcelAttendance: {
         title: 'Excel Attendance Verification',
         successLabel: 'Attendance',
@@ -712,7 +741,8 @@ export const HR_STAFF_CONFIGS: Record<string, VerificationConfig> = {
         },
         moid: (r, d) => d.MOID || 183,
         remarksKey: (r, d) => d.ExcelRefno || r.TransactionNo || '',
-        showReturn: 'Yes',
+        showReturn: 'No',
+        excludeActions: () => ['return', 'reject'],
         confirmLabel: 'I have verified all attendance details.',
         header: {
             title: (r, d) => d.CCName || d.CostCenter || r.CCName || r.CostCenter,
@@ -740,13 +770,15 @@ export const HR_STAFF_CONFIGS: Record<string, VerificationConfig> = {
         },
         approve: {
             route: 'HR/ApproveExcelMonthAttendance',
-            payload: (r, d, { action, note, user, roleCode, roleId }) => ({
+            payload: (r, d, { note, user, roleId }) => ({
                 AttendanceJson: JSON.stringify(list(d.lstAttendanceData)), CostCenter: String(d.CostCenter || r.CostCenter || '').trim(),
                 GenerateFor: String(d.GenerateFor || r.GenerateFor || 'Month').trim(), RoleId: parseInt(roleId, 10), Createdby: user,
-                Remarks: appendApprovalComment(d.Remarks, roleCode || 'Attendance Verifier', user, note), ExcelRefno: String(d.ExcelRefno || r.ExcelRefno || '').trim(),
-                LabourType: String(d.LabourType || r.LabourType || '').trim(), ContractorCode: String(d.ContractorCode || r.ContractorCode || '').trim(), Action: action,
+                // Stored as this approver's remark (REPLACE(@Remarks,'|','')): the note only
+                Remarks: note, ExcelRefno: String(d.ExcelRefno || r.ExcelRefno || '').trim(),
+                LabourType: String(d.LabourType || r.LabourType || '').trim(), ContractorCode: String(d.ContractorCode || r.ContractorCode || '').trim(),
             }),
-            ok: ANY,
+            // The API answers "Submited" on success, else the SP's error text without its "Error$" prefix
+            ok: ['Submited'],
         },
     },
 
@@ -1054,7 +1086,9 @@ export const HR_STAFF_CONFIGS: Record<string, VerificationConfig> = {
         approve: {
             route: 'HR/ApproveStaffRegistration',
             payload: (r, d, { action, note, user, roleId, aux }) => staffRegistrationPayload(r, d, list(aux.docs), { action, note, user, roleId }),
-            ok: ANY,
+            // "Submited$" (Approve: "Submited$<new username>"); otherwise the SP's / document upload's message
+            // ("AadharNo Already Exist", "Invalid Contract End Date", "Username Already Exist", …)
+            ok: (s) => String(s || '').split('$')[0].trim() === 'Submited',
         },
     },
 };

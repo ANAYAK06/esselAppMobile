@@ -44,6 +44,8 @@ export default function SupplierInvoiceDetailScreen() {
             ApprovalNote: note,
             RoleId: roleId,
             CreatedBy: userName,
+            // Not read by the SP: on Reject the API posts a rejection alert with it (0 if missing)
+            MOID: d?.MOID || 0,
         };
         try {
             const status = await approveSupplierInvoice(payload);

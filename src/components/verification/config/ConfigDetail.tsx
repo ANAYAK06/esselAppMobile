@@ -115,10 +115,20 @@ export default function ConfigDetail() {
                 action: action.type, value: action.value || action.type, note, user: userName, roleCode, roleId, userId: uid, aux, ext, pre,
             });
             const approveRoute = routeOf(config.approve.route, row);
-            const body = config.approve.method === 'post' ? await postRoute(approveRoute, payload) : await putRoute(approveRoute, payload);
-            const status = statusOf(body);
+            const send = (p: Rec) => (config.approve.method === 'post' ? postRoute(approveRoute, p) : putRoute(approveRoute, p));
+            let body = await send(payload);
+            let status = statusOf(body);
+            if (!isOk(config.approve.ok, status, row, record, body) && config.approve.retry) {
+                const more = await config.approve.retry(status, row, record);
+                if (more === false) return;
+                if (more) {
+                    body = await send({ ...payload, ...more });
+                    status = statusOf(body);
+                }
+            }
             if (!isOk(config.approve.ok, status, row, record, body)) {
-                Alert.alert('Not applied', status || `${action.text} was not applied — the server returned no confirmation.`);
+                const text = config.approve.errorText ? config.approve.errorText(status) : status;
+                Alert.alert('Not applied', text || `${action.text} was not applied — the server returned no confirmation.`);
                 return;
             }
             let extra: string | void = undefined;

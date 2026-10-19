@@ -194,8 +194,9 @@ export const PURCHASE_CONFIGS: Record<string, VerificationConfig> = {
         approve: {
             route: 'Purchase/ApproveNewStockIssueRecieved',
             payload: (r, d, { value, note, user, roleId }) => ({ Refno: r.Refno, ActionRemarks: note, Appstatus: value, RoleID: roleId, Createdby: user }),
-            // The web treats an empty answer as success too
-            ok: (s) => !s || s === 'Submitted',
+            // spApproveNewStockIssueRecieved sets @ICresult='Submitted' on every Verify / Reject / Approve path;
+            // an empty answer means the action matched no branch and nothing was saved (the web treats it as success)
+            ok: ['Submitted'],
         },
     },
 
@@ -303,7 +304,9 @@ export const PURCHASE_CONFIGS: Record<string, VerificationConfig> = {
                     Type: r.MrrType, MrrStatus: pre.mrrStatus, CurrentMrrStatus: String(items[0]?.CurrentMrrStatus || '').trim(), Roleid: roleId, CreatedBy: user,
                 };
             },
-            ok: (s) => !s || s === 'Submitted',
+            // Both SPs set @TRresult='Submitted' on every Verify / Reject / Approve path; an empty answer
+            // means the action matched no branch and nothing was saved (the web treats it as success)
+            ok: ['Submitted'],
         },
     },
 };

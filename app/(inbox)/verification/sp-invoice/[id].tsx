@@ -55,6 +55,8 @@ export default function SPInvoiceDetailScreen() {
                 Deductiondcas: (d.DeductionList || []).map((x) => `${x.DCACode},`).join(''),
                 Deductionamounts: (d.DeductionList || []).map((x) => `${x.Amount},`).join(''),
                 TaxApplicable: d.TaxApplicable,
+                // Not read by the SP: on Reject the API posts a rejection alert with it (0 if missing)
+                MOID: d.MOID || 0,
             });
             if (isSubmitted(status)) showSubmitResult(`SP Invoice ${ACTION_DONE[action.type]}`, status, () => router.back());
             else Alert.alert('Not applied', status || 'The server returned no confirmation.');

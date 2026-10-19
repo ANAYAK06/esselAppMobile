@@ -75,6 +75,7 @@ export const CONFIG_VERIFICATION_ROUTES: { key: string; path: RegExp; categories
     { key: 'VendorCMSPayment', path: /\/purchase\/vendorcmspaymentverification(?:$|[?#/])/, categories: ['vendor cms payment'] },
     { key: 'BOESettlement', path: /\/purchase\/boesettelmentverification(?:$|[?#/])/, categories: ['boe settlement'] },
     { key: 'LCBGCreation', path: /\/purchase\/lcbgcreationverification(?:$|[?#/])/, categories: ['lc and bg creation'] },
+    { key: 'LCBGAmend', path: /\/purchase\/lcbgamendverification(?:$|[?#/])/, categories: ['lc and bg amend/close'] },
     { key: 'ClientScrapSaleInvoice', path: /\/accountsapproval\/verifyclientscrapsaleinvoice(?:$|[?#/])/, categories: ['scrap sale invoice'] },
     { key: 'ClientPOAmend', path: /\/accountsapproval\/verifyclientpoamend(?:$|[?#/])/, categories: ['amend client po'] },
     { key: 'ItemCodeUpdation', path: /\/purchase\/verifyitemcodeupdation(?:$|[?#/])/, categories: ['item code updation'] },

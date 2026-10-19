@@ -480,6 +480,8 @@ export const CLIENT_BILLING_CONFIGS: Record<string, VerificationConfig> = {
             route: 'Accounts/ApproveClientPOAmend',
             payload: (r, d, { action, note, user, roleId }) => ({
                 oldPONO: d.oldPONO, Amendpono: d.Amendpono, Action: action, ApprovalNote: note, RoleId: roleId, Createdby: user,
+                // Not read by the SP: on Reject the API posts a rejection alert with these (0 / null if missing)
+                MOID: d.MOID || 0, CostCenter: d.CostCenter || '',
             }),
             ok: ['Submited', 'Submitted'],
         },

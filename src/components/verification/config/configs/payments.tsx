@@ -474,6 +474,63 @@ export const PAYMENT_CONFIGS: Record<string, VerificationConfig> = {
         },
     },
 
+    // Legacy /Purchase/LCBGAmendVerification (+ LCBGAmendVerificationGrid / LCBGAmendVerificationView)
+    LCBGAmend: {
+        title: 'LC / BG Amend / Close Verification',
+        successLabel: 'LC/BG',
+        noun: 'LC/BG',
+        icon: Landmark,
+        searchPlaceholder: 'Search by LC/BG no, type, amend / close…',
+        queue: { route: 'Purchase/LCBGAmendVerificationGrid', params: ({ roleId, userId }) => ({ Roleid: roleId, Created: String(userId), Userid: userId }) },
+        itemKey: (r) => `${r.LCBGNo}|${r.RID}`,
+        card: {
+            title: (r) => r.LCBGNo,
+            subtitle: (r) => [lcbgTypeName(r.LCBGType), r.LCBGStatusType].filter(Boolean).join(' · '),
+            meta: (r) => r.Date,
+            amount: (r) => money(r.TotalValue),
+        },
+        searchText: (r) => `${r.LCBGNo} ${r.LCBGType} ${r.LCBGStatusType} ${r.Date} ${r.TotalValue}`,
+        detail: { route: 'Purchase/LCBGAmendVerificationView', params: (r) => ({ LCBGno: r.LCBGNo, MOID: r.MOID, RID: r.RID }) },
+        moid: (r, d) => d.MOID || r.MOID,
+        // Legacy loads remarks with Trno = the amendment's TransactionNo (returned as Refno)
+        remarksKey: (r, d) => d.Refno,
+        // Legacy drops Return from this screen's status list; spApproveLCBGAmend has no Return branch
+        showReturn: 'No',
+        excludeActions: () => ['return'],
+        header: {
+            title: (r) => r.LCBGNo,
+            subtitle: (r, d) => money(d.TotalValue ?? r.TotalValue),
+            chips: (r, d) => [lcbgTypeName(d.LCBGType || r.LCBGType), d.LCBGStatusType || r.LCBGStatusType],
+        },
+        // LC is raised for a vendor, BG for a client / sub client; Amend shows the value split, Close only the total
+        sections: (r, d) => {
+            const isAmend = (d.LCBGStatusType || r.LCBGStatusType) === 'Amend';
+            return [{
+                fields: [
+                    ['Type', lcbgTypeName(d.LCBGType)],
+                    d.LCBGType === 'LC' && ['Vendor', d.VendorCode],
+                    d.LCBGType !== 'LC' && ['Client', d.ClientCode],
+                    d.LCBGType !== 'LC' && ['Sub Client', d.SubClientCode],
+                    ['PO Number', d.PONO, true],
+                    isAmend && d.LCVENPOS && ['New POs in this amendment', d.LCVENPOS, true],
+                    ['LC/BG No', d.LCBGNo], ['Status Type', d.LCBGStatusType], [isAmend ? 'Amend Date' : 'Close Date', d.Date],
+                    isAmend && ['Tolerance', d.Tolerance],
+                    isAmend && ['Basic Value', money(d.BasicValue)],
+                    isAmend && ['GST Value', money(d.GSTValue)],
+                    isAmend && ['Charges', money(d.Charges)],
+                    ['Total Value', money(d.TotalValue)],
+                    ['Bank Remarks', d.BankRemarks, true],
+                ],
+            }];
+        },
+        approve: {
+            route: 'Purchase/ApproveLCBGAmend',
+            // The API reads the action from Status (legacy controller mapping)
+            payload: (r, d, { action, note, user, roleId }) => ({ RID: Number(r.RID), LCBGNo: r.LCBGNo, Status: action, Remarks: note, CreatedBy: user, RoleId: roleId }),
+            ok: ['Submitted'],
+        },
+    },
+
     // Legacy /Purchase/VerifyCreditandDebitNote (+ Grid / View)
     CreditDebitNote: {
         title: 'Credit & Debit Note Verification',

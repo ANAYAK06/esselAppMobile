@@ -63,7 +63,14 @@ export default function CCAmendmentDetail() {
                 UID: uid || 0,
                 VerificationType: action.value || action.type,
             });
-            showSubmitResult(`${action.text} completed successfully`, status, () => router.back());
+            // spApproveCCBudgetAmend answers "Submitted+<CCCode>"; anything else ("Does not have approval
+            // permission", "Next Level Verification User Does Not Exist", an SQL error) is the reason it failed
+            const [result, ccInfo] = status.trim().split('+');
+            if (result !== 'Submitted') {
+                Alert.alert('Not applied', status || 'The server returned no confirmation.');
+                return;
+            }
+            showSubmitResult(`Budget${ccInfo ? ` ${ccInfo}` : ''}: ${action.text} completed successfully`, '', () => router.back());
         } catch (e: any) {
             Alert.alert('Error', e?.response?.data?.Message || e?.message || 'Something went wrong');
         }
@@ -125,7 +132,7 @@ export default function CCAmendmentDetail() {
                     <ActionPanel
                         moid={d.MOID}
                         roleId={roleId}
-                        chkAmt={amended}
+                        chkAmt={0}   // legacy CCAmendBudgetView and the web ask for the status list with ChkAmt 0
                         showReturn
                         confirmLabel="I have verified the amendment details — amounts, cost center, justification and documents"
                         onSubmit={submit}

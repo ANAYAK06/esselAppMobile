@@ -105,14 +105,17 @@ export const BUDGET_CLIENT_CONFIGS: Record<string, VerificationConfig> = {
         }],
         approve: {
             route: 'Accounts/ApproveClientPO',
-            payload: (r, d, { value, note, user, roleCode, roleId }) => ({
-                Action: value, total: d.total?.toString() || '', povalue: d.povalue?.toString() || '', gst: d.gst?.toString() || '',
-                ApprovalNote: note, Remarks: appendApprovalComment(d.Remarks, roleCode || 'PO Verifier', user, note), pono: r.pono || '',
+            // spApproveClientPO writes @UserRemarks into the remarks history and @Approvalnote onto the PO; the API's
+            // Reject branch (exact "Reject") posts a rejection alert with MOID / CostCenter
+            payload: (r, d, { action, note, user, roleCode, roleId }) => ({
+                Action: action, total: d.total?.toString() || '', povalue: d.povalue?.toString() || '', gst: d.gst?.toString() || '',
+                ApprovalNote: note, UserRemarks: note, Remarks: appendApprovalComment(d.Remarks, roleCode || 'PO Verifier', user, note), pono: r.pono || '',
                 CreatedBy: user, RoleId: String(roleId), clientid: d.clientid || r.clientid || '', subclientid: d.subclientid || r.subclientid || '',
                 postartdate: d.postartdate || r.postartdate || '', pocompletiondate: d.pocompletiondate || r.pocompletiondate || '',
-                CostCenter: d.CostCenter || r.CostCenter || '', Status: r.Status || '1',
+                CostCenter: d.CostCenter || r.CostCenter || '', Status: r.Status || '1', MOID: d.MOID || 0,
             }),
-            ok: ANY,
+            // "Submited" (optionally with a "$" / "+" suffix); otherwise "Next Level Verification User Does Not Exist" or an SQL error
+            ok: (s) => String(s || '').trim().split(/[$+]/)[0] === 'Submited',
         },
     },
 

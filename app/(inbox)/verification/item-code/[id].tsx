@@ -12,7 +12,7 @@ import {
     getItemCodeDetail, getItemCodeLinks, getItemCodeRemarks, getItemCodeTraders, verifyItemCode,
     type ItemCodeDetail, type ItemCodeRow,
 } from '@/src/api/verification/purchaseVerificationAPI';
-import { appendApprovalComment, type StatusAction } from '@/src/api/verification/verificationCommonAPI';
+import { isSubmitted, type StatusAction } from '@/src/api/verification/verificationCommonAPI';
 import {
     ActionPanel, DetailHero, FieldGrid, RemarksTimeline, Section, money, showSubmitResult,
 } from '@/src/components/verification/kit/VerificationKit';
@@ -56,7 +56,7 @@ export default function ItemCodeDetailScreen() {
 }
 
 function ItemCodeBody({ d }: { d: ItemCodeDetail }) {
-    const { roleId, userName, roleCode } = useVerifier();
+    const { roleId, userName } = useVerifier();
     const [itemName, setItemName] = useState(d.Itemname || '');
     const [specification, setSpecification] = useState(d.Specification || '');
     const [basicPrice, setBasicPrice] = useState(d.Basicprice || '');
@@ -72,17 +72,19 @@ function ItemCodeBody({ d }: { d: ItemCodeDetail }) {
         try {
             const status = await verifyItemCode({
                 Rowid: d.Rowid,
-                Remarks: appendApprovalComment(d.Remarks || '', roleCode || 'Item Code Verifier', userName, note),
+                // spVerifyItemCode stores this as the verifier's own remark (and builds ApprovalNote itself): note only
+                Remarks: note,
                 Appstatus: action.value || action.text || action.type,
                 RoleID: roleId,
-                LastRoleID: d.LastRoleID ?? null,
+                LastRoleID: d.LastRoleID || null,
                 Basicprice: basicPrice,
                 Itemname: itemName.trim(),
                 Specification: specification.trim(),
                 Createdby: userName,
             });
-            // The SP answers "Invalid …" for a rejected request, even with IsSuccessful true
-            if (status.toLowerCase().startsWith('invalid')) return void Alert.alert('Not saved', status);
+            // spVerifyItemCode answers "Submitted"; anything else ("Invalid Basic Price", "The Item Code already
+            // approved", "Next Level Verification User Does Not Exist", …) arrives with IsSuccessful true
+            if (!isSubmitted(status)) return void Alert.alert('Not saved', status || 'Action was not applied');
             showSubmitResult(`${action.text} completed successfully`, status, () => router.back());
         } catch (e: any) {
             Alert.alert('Error', e?.response?.data?.Message || e?.message || `Failed to ${action.text.toLowerCase()}`);

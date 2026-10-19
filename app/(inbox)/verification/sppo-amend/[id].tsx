@@ -63,6 +63,8 @@ export default function SPPOAmendDetailScreen() {
                 AmendAmount: x.AmendAmount || row.AmendAmount || 0,
                 SubstractAmount: x.SubstractAmount || row.SubstractAmount || 0,
                 Terms: String(x.Terms || row.Terms || '').split('|').map((t) => t.trim()).filter(Boolean).map((t) => `${t}|`).join(''),
+                // Not read by the SP: on Reject the API posts a rejection alert with it (0 if missing)
+                MOID: x.MOID || 0,
             });
             // spApproveSPPOAmend answers "Submited"; anything else is the error text
             if (!isSubmitted(status)) {

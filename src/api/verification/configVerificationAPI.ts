@@ -48,5 +48,6 @@ export const statusOf = (body: any): string => {
     const d = dataOf(body);
     if (typeof d === 'string') return d;
     if (typeof body === 'string') return body;
-    return d?.saveStatus ?? d?.Message ?? body?.Message ?? '';
+    // ErrorMsg: HR/ApproveBulkWorker answers Data = { ErrorStatus, ErrorMsg, lstError } (ErrorMsg = the SP status)
+    return d?.saveStatus ?? d?.ErrorMsg ?? d?.Message ?? body?.Message ?? '';
 };

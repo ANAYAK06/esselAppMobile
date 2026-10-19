@@ -165,6 +165,9 @@ export default function SupplierPODetailScreen() {
             ItemTermHeadID: d.ItemTermHeadID || 0,
             PreferredRemarks: d.PreferredRemarks || null,
             PredefinedTermsExist: d.PredefinedTermsExist || 'No',
+            // Not read by the SP: on Reject the API posts a rejection alert with these (0 / null if missing)
+            MOID: d.MOID || 0,
+            CCCode: d.CCCode || row.CCCode || '',
         };
 
         try {

@@ -1,5 +1,6 @@
 // SPPO verification — service lines with lower-only rate editing, tick every line, then
-// verify / approve (web: pages/SPPO/VerifySPPO.jsx). Return is not offered on this page.
+// verify / approve / return (web: pages/SPPO/VerifySPPO.jsx keeps Return, as legacy VerifySPPOView;
+// spApproveSPPO's Return sets the SPPO back to status 0).
 // The edited rates are only a check aid, as on the web: the payload is the fields legacy ApproveSPPO
 // posts, with the PO's stored terms / total (spApproveSPPO rewrites the terms on every action).
 import React, { useCallback, useState } from 'react';
@@ -70,6 +71,8 @@ export default function SPPODetailScreen() {
             PreferredRemarks: predefinedExist === 'Yes' ? joinTerms(d.PreferredRemarks) : '',
             RoleId: roleId,
             CreatedBy: userName,
+            // Not read by the SP: on Reject the API posts a rejection alert with it (0 if missing)
+            MOID: d.MOID || 0,
         };
         try {
             const status = await approveSPPO(payload);
@@ -172,7 +175,7 @@ export default function SPPODetailScreen() {
                     {String(row.Status) === '0' ? (
                         <Notice tone="amber" title="Returned SPPO" text="This SPPO was returned for changes. Edit and resubmit it from the Corex web app." />
                     ) : (
-                        <ActionPanel moid={d.MOID} roleId={roleId} chkAmt={num(d.TotalValue)} showReturn={false} onSubmit={submit} />
+                        <ActionPanel moid={d.MOID} roleId={roleId} chkAmt={num(d.TotalValue)} onSubmit={submit} />
                     )}
                 </>
             )}

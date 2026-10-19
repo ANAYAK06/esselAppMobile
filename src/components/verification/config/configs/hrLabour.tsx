@@ -96,16 +96,19 @@ const workerBatch = (staffReg: boolean): VerificationConfig => ({
     },
     approve: {
         route: 'HR/ApproveBulkWorker',
-        payload: (r, d, { value, note, user, roleId, aux }) => {
+        // The data layer runs spApproveBulkStaff only when Action is exactly "Approve" (else spVerifyBulkStaff, which also
+        // handles Reject), so the action type is sent rather than the status list's Value
+        payload: (r, d, { action, note, user, roleId, aux }) => {
             const workers = workersOf(aux.batch);
             const b = batchOf(aux);
             return {
                 SheetData: '', lstWorker: workers.map(workerPayload), Createdby: user, RoleId: parseInt(roleId, 10) || 0,
-                MOID: parseInt(r.MOID || b.MOID, 10) || 0, Action: value, TransactionRefNo: String(r.TransactionRefNo || b.TransactionRefNo || ''),
+                MOID: parseInt(r.MOID || b.MOID, 10) || 0, Action: action, TransactionRefNo: String(r.TransactionRefNo || b.TransactionRefNo || ''),
                 Id: parseInt(r.Id || b.Id, 10) || 0, WorkerCount: workers.length, Note: note,
             };
         },
-        ok: ANY,
+        // Data = { ErrorStatus, ErrorMsg, lstError }: ErrorStatus "Submited" on success, else the SP's message
+        ok: (s, r, d, body) => String(body?.Data?.ErrorStatus ?? s ?? '').trim() === 'Submited',
     },
 });
 
