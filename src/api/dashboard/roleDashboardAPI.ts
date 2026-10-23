@@ -193,6 +193,23 @@ export const getVendorOutStandingSummary = (scope: Scope) =>
 export const getStockPurchaseConsolidateSummary = (scope: Scope) =>
     getData<GSTSummary>('Reports/GetStockPurchaseConsolidateSummary', scoped(scope));
 
+// Company Overhead card (Top Level only): the Consolidate Cash Flow overhead % —
+// Non-Performing / Performing CC expenses × 100, current FY vs previous FY. Company-wide, so
+// it takes no scope.
+export interface OverheadPercentSummary {
+    CurrentFY?: string;
+    PreviousFY?: string;
+    OverheadPercentCurrentFY?: number;
+    OverheadPercentPreviousFY?: number;
+    PerformingExpenseCurrentFY?: number;
+    NonPerformingExpenseCurrentFY?: number;
+    PerformingExpensePreviousFY?: number;
+    NonPerformingExpensePreviousFY?: number;
+}
+
+export const getOverheadPercentSummary = () =>
+    getData<OverheadPercentSummary>('Reports/GetOverheadPercentSummary', {});
+
 // ---- Transaction log (recent activity + sales / purchase this month) ---------------------
 
 export interface TransactionLogRow {

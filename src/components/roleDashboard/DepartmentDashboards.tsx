@@ -6,7 +6,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import {
     Award, Ban, Building2, CalendarCheck, Calendar, ChevronRight, ClipboardList, Copy, CreditCard, DollarSign,
-    FileBadge, FileClock, FileText, HardHat, Landmark, PiggyBank, Receipt, ScrollText, ShieldAlert, ShieldCheck,
+    FileBadge, FileClock, FileText, HardHat, Landmark, Percent, PiggyBank, Receipt, ScrollText, ShieldAlert, ShieldCheck,
     ShieldX, ShoppingCart, TrendingUp, Truck, UserMinus, UserPlus, UserX, Users, Wallet,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
@@ -17,6 +17,7 @@ import {
     getCCCashBalanceSummary,
     getClientOutStandingSummary,
     getHRDashboardSummary,
+    getOverheadPercentSummary,
     getProjectDashboardSummary,
     getSNPDashboardSummary,
     getSNPPendingDetails,
@@ -188,7 +189,69 @@ function AccountsDashboard() {
 
 const monthLabel = (d: Date) => d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
 
-function FinanceDashboard() {
+const pct = (v?: number) => `${(Number(v) || 0).toFixed(2)}%`;
+
+// Web: pages/Dashboard/OverheadPercentCard.jsx. A rising overhead % is unfavourable, so an
+// increase reads red.
+function OverheadPercentCard() {
+    const { data: s, loading } = useScopedData(getOverheadPercentSummary);
+    const current = Number(s?.OverheadPercentCurrentFY) || 0;
+    const previous = Number(s?.OverheadPercentPreviousFY) || 0;
+    const diff = Math.round((current - previous) * 100) / 100;
+    const up = diff > 0;
+
+    return (
+        <View className="bg-white rounded-2xl border border-gray-200 mb-4 overflow-hidden">
+            <View className="flex-row items-center justify-between px-4 py-3 bg-orange-50">
+                <View className="flex-row items-center gap-2.5 flex-1">
+                    <IconBadge icon={Percent} tone="orange" />
+                    <View className="flex-1">
+                        <Text className="text-sm font-semibold text-gray-900">Company Overhead</Text>
+                        <Text className="text-[11px] text-gray-500" numberOfLines={1}>
+                            {s?.CurrentFY ? `FY ${s.CurrentFY}` : 'Current FY'}
+                        </Text>
+                    </View>
+                </View>
+                {loading ? <Spinner /> : (
+                    <Text className="text-lg font-bold text-gray-900 ml-2">{s ? pct(current) : '—'}</Text>
+                )}
+            </View>
+
+            {!loading && s ? (
+                <View className="px-4 py-3 gap-1.5">
+                    {previous !== 0 ? (
+                        <View className="flex-row items-center justify-between">
+                            <Text className="text-xs text-gray-500">
+                                vs {pct(previous)}{s.PreviousFY ? ` in FY ${s.PreviousFY}` : ' last FY'}
+                            </Text>
+                            {diff !== 0 ? (
+                                <Text className={`text-xs font-semibold ${up ? 'text-red-600' : 'text-green-600'}`}>
+                                    {up ? '↑' : '↓'}{Math.abs(diff).toFixed(2)} pts
+                                </Text>
+                            ) : null}
+                        </View>
+                    ) : null}
+                    <View className="flex-row items-center justify-between">
+                        <Text className="text-[11px] text-gray-500">Non-Performing CC expenses</Text>
+                        <Text className="text-[11px] text-gray-700">{rupees(s.NonPerformingExpenseCurrentFY)}</Text>
+                    </View>
+                    <View className="flex-row items-center justify-between">
+                        <Text className="text-[11px] text-gray-500">÷ Performing CC expenses</Text>
+                        <Text className="text-[11px] text-gray-700">{rupees(s.PerformingExpenseCurrentFY)}</Text>
+                    </View>
+                </View>
+            ) : null}
+            {!loading && !s ? <EmptyText label="No data available" /> : null}
+        </View>
+    );
+}
+
+// Top Level = the Finance layout plus the company-wide overhead card
+function TopLevelDashboard() {
+    return <FinanceDashboard topLevel />;
+}
+
+function FinanceDashboard({ topLevel = false }: { topLevel?: boolean }) {
     const { sales, purchase } = useSalesPurchaseMetrics();
     const receivables = useScopedData(getClientOutStandingSummary);
     const payables = useScopedData(getVendorOutStandingSummary);
@@ -217,6 +280,7 @@ function FinanceDashboard() {
                     loading={purchase.loading} current={purchase.current} previous={purchase.previous} unfavorable />
             </TileRow>
             <View className="h-1" />
+            {topLevel ? <OverheadPercentCard /> : null}
             <ApprovalsCard />
 
             <SectionTitle title="Outstanding" />
@@ -558,9 +622,9 @@ function BaseDashboard() {
 // ---- Routing -----------------------------------------------------------------------------
 
 // Keyed by DepartmentCode from GetUserRoleDashboardType, same map as the web's
-// RoleBasedApplication.jsx. Top Level shares the Finance layout on mobile.
+// RoleBasedApplication.jsx. Top Level shares the Finance layout on mobile, plus the overhead card.
 export const DASHBOARDS: Record<DepartmentCode, { name: string; component: React.ComponentType }> = {
-    TL: { name: 'Top Level', component: FinanceDashboard },
+    TL: { name: 'Top Level', component: TopLevelDashboard },
     HR: { name: 'HR', component: HRDashboard },
     ACC: { name: 'Accounts', component: AccountsDashboard },
     FIN: { name: 'Finance', component: FinanceDashboard },
