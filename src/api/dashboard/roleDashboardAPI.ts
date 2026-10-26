@@ -232,6 +232,20 @@ export const getTransactionLog = (fromDate: string, toDate: string, tranType: st
         ...scoped(scope),
     });
 
+// ---- Sales / Purchase this month vs last ---------------------------------------------------
+
+// Pre-tax BasicValue from ClientInvoice (Sales) / VendorInvoice (Purchase), Status != 'Rejected',
+// by InvoiceDate, CC-scoped (web dashboardSummaryAPI.js getMonthSalesPurchaseSummary)
+export interface MonthSalesPurchaseSummary {
+    CurrentMonthSales?: number;
+    PreviousMonthSales?: number;
+    CurrentMonthPurchase?: number;
+    PreviousMonthPurchase?: number;
+}
+
+export const getMonthSalesPurchaseSummary = (scope: Scope) =>
+    getData<MonthSalesPurchaseSummary>('Reports/GetMonthSalesPurchaseSummary', scoped(scope));
+
 // ---- Approvals (pending tracking + rejected) ---------------------------------------------
 
 export interface TrackingValue {

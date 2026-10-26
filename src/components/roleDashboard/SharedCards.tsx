@@ -10,6 +10,7 @@ import { AlertTriangle, ArrowLeft, CheckCircle, ChevronRight, Clock, Inbox, List
 import { useAppSelector } from '@/src/store/hooks';
 import { selectTotalPendingCount } from '@/src/slice/notifications/inboxNotificationsSlice';
 import {
+    getMonthSalesPurchaseSummary,
     getRejectedData,
     getTrackingData,
     getTrackingNos,
@@ -28,11 +29,6 @@ import { Card, EmptyText, Pill, Spinner, plural, rupees } from './DashboardUI';
 
 const ymd = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-const monthRange = (offset: number): [string, string] => {
-    const now = new Date();
-    return [ymd(new Date(now.getFullYear(), now.getMonth() + offset, 1)), ymd(new Date(now.getFullYear(), now.getMonth() + offset + 1, 0))];
-};
 
 export const todayLabel = () =>
     new Date().toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' });
@@ -340,23 +336,14 @@ export const RecentActivityCard = ({ limit = 5 }: { limit?: number }) => {
     );
 };
 
-// ---- Sales / Purchase this month vs last (Client Invoice = Sales, Vendor Invoice = Purchase) ----
-
-const logTotal = (rows: { DebitValue?: number; CreditValue?: number }[] | null) =>
-    (rows ?? []).reduce((sum, r) => sum + (Number(r.DebitValue) || 0) + (Number(r.CreditValue) || 0), 0);
-
-const salesThisMonth = (scope: Scope) => getTransactionLog(...monthRange(0), 'Client Invoice', scope);
-const salesLastMonth = (scope: Scope) => getTransactionLog(...monthRange(-1), 'Client Invoice', scope);
-const purchaseThisMonth = (scope: Scope) => getTransactionLog(...monthRange(0), 'Vendor Invoice', scope);
-const purchaseLastMonth = (scope: Scope) => getTransactionLog(...monthRange(-1), 'Vendor Invoice', scope);
+// ---- Sales / Purchase this month vs last ------------------------------------------------------
+// Reports/GetMonthSalesPurchaseSummary: pre-tax invoice BasicValue, same source as the web.
+// (Previously summed transaction-log rows, whose Client Invoice value included tax.)
 
 export const useSalesPurchaseMetrics = () => {
-    const salesNow = useScopedData(salesThisMonth);
-    const salesPrev = useScopedData(salesLastMonth);
-    const purchaseNow = useScopedData(purchaseThisMonth);
-    const purchasePrev = useScopedData(purchaseLastMonth);
+    const { data, loading } = useScopedData(getMonthSalesPurchaseSummary);
     return {
-        sales: { current: logTotal(salesNow.data), previous: logTotal(salesPrev.data), loading: salesNow.loading || salesPrev.loading },
-        purchase: { current: logTotal(purchaseNow.data), previous: logTotal(purchasePrev.data), loading: purchaseNow.loading || purchasePrev.loading },
+        sales: { current: Number(data?.CurrentMonthSales) || 0, previous: Number(data?.PreviousMonthSales) || 0, loading },
+        purchase: { current: Number(data?.CurrentMonthPurchase) || 0, previous: Number(data?.PreviousMonthPurchase) || 0, loading },
     };
 };
