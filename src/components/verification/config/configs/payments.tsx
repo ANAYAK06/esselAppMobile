@@ -13,7 +13,7 @@ import type { Rec, VerificationConfig } from '../types';
 const list = (v: unknown): Rec[] => (Array.isArray(v) ? v : []);
 
 // Legacy VerifyCCSEPPayView display names for SEPPayments.PaymentFor
-const SEP_PAYMENT_LABELS: Record<string, string> = { StaffPF: 'Staff PF', LabourPF: 'Labour PF', StaffESI: 'Staff ESI', LabourESI: 'Labour ESI' };
+const SEP_PAYMENT_LABELS: Record<string, string> = { StaffPF: 'Staff PF', LabourPF: 'Labour PF', StaffESI: 'Staff ESI', LabourESI: 'Labour ESI', LabourAdvance: 'Labour Advance' };
 const sepPaymentLabel = (v: string) => SEP_PAYMENT_LABELS[v] || v;
 
 // LC/BG type as the legacy view spells it (LC → Letter of Credit, anything else → Bank Guarantee)

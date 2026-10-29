@@ -190,7 +190,7 @@ export default function SupplierPOAmendDetailScreen() {
                     <Section title="Amendment value breakdown">
                         <FieldGrid
                             fields={[
-                                ['Excess PO value (+)', money(d.PlusAmount)],
+                                ['Added value', money(d.PlusAmount)],
                                 ['Reduced PO value (−)', money(d.MinusAmount)],
                                 ['Old PO value', money(d.OldPOValue)],
                                 ['Amend diff. value', money(d.AmendDiffValue)],
@@ -222,7 +222,7 @@ export default function SupplierPOAmendDetailScreen() {
                                         <View className="flex-row gap-2 mt-2">
                                             <View className="flex-1 rounded-lg bg-gray-50 px-2.5 py-1.5">
                                                 <Text className="text-[10px] text-gray-400">Previous qty</Text>
-                                                <Text className="text-xs font-semibold text-gray-800">{it.quantity ?? it.CurrentQty ?? '—'} {it.units}</Text>
+                                                <Text className="text-xs font-semibold text-gray-800">{it.CurrentQty ?? '—'} {it.units}</Text>
                                             </View>
                                             <View className={`flex-1 rounded-lg px-2.5 py-1.5 ${minus ? 'bg-rose-50' : 'bg-green-50'}`}>
                                                 <Text className="text-[10px] text-gray-400">{it.AmendType || 'Amend'}</Text>

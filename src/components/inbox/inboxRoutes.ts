@@ -197,6 +197,9 @@ export const INBOX_ROUTES: InboxRoute[] = [
     viaConfig('StaffObjectivesGoals', 'Staff Objectives & Goals', (f) => f.path.includes('/hr/verifyobjectivesandgoals')),
     viaConfig('EmployeeCTC', 'Employee CTC', (f) => f.path.includes('/hr/verifypayrollstructurenew')),
     viaConfig('LabourCTC', 'Labour CTC', (f) => f.path.includes('/hr/verifynewlabourctc') || f.path.includes('/hr/verifylabourctc')),
+    // Bulk Labour Advance (MOID 702) — must stay above the Staff Advance "advance" catch-all
+    viaConfig('LabourAdvance', 'Labour Advance', (f) =>
+        /\/hr\/(verify|approve)labouradvance(?:$|[?#/])/.test(f.path) || f.category.trim() === 'labour advance'),
     viaConfig('LabourPayroll', 'Labour Payroll', (f) => f.path.includes('/hr/verifylabourpayroll') || f.path.includes('/hr/approvelabourpayroll')),
     viaConfig('LabourPayRevision', 'Labour Pay Revision', (f) => f.path.includes('/hr/verifylbpayrevision')),
     viaConfig('StaffPayRevision', 'Staff Pay Revision', (f) => f.path.includes('/hr/verifypayrevision')),
