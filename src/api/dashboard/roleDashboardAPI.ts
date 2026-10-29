@@ -167,8 +167,13 @@ export interface PayablesSummary {
     HoldBalance?: number;
 }
 
+// GST position card — previous calendar month (spGetGSTPositionSummary, same as the web):
+// Outward = client invoice GST + debit notes − credit notes; Inward = creditable vendor invoice
+// GST (supplier + SPPO) + vendor credit notes − vendor debit notes; GSTPaid = payments made in
+// the current month against last month's liability.
 export interface GSTSummary {
     FromDate?: string;
+    ToDate?: string;
     ClientGSTTotal?: number;
     VendorGSTTotal?: number;
     ClientInvoiceGST?: number;
@@ -180,6 +185,10 @@ export interface GSTSummary {
     VendorIGST?: number;
     VendorCGST?: number;
     VendorSGST?: number;
+    VendorInvoiceGST?: number;
+    VendorCreditNoteGST?: number;
+    VendorDebitNoteGST?: number;
+    NetGST?: number;
     GSTPaid?: number;
     GSTPaidDate?: string | null;
 }
@@ -190,8 +199,8 @@ export const getClientOutStandingSummary = (scope: Scope) =>
 export const getVendorOutStandingSummary = (scope: Scope) =>
     getData<PayablesSummary>('Reports/GetVendorOutStandingSummary', scoped(scope));
 
-export const getStockPurchaseConsolidateSummary = (scope: Scope) =>
-    getData<GSTSummary>('Reports/GetStockPurchaseConsolidateSummary', scoped(scope));
+export const getGSTPositionSummary = (scope: Scope) =>
+    getData<GSTSummary>('Reports/GetGSTPositionSummary', scoped(scope));
 
 // Company Overhead card (Top Level only): the Consolidate Cash Flow overhead % —
 // Non-Performing / Performing CC expenses × 100, current FY vs previous FY. Company-wide, so

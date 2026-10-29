@@ -21,7 +21,7 @@ import {
     getProjectDashboardSummary,
     getSNPDashboardSummary,
     getSNPPendingDetails,
-    getStockPurchaseConsolidateSummary,
+    getGSTPositionSummary,
     getVendorOutStandingSummary,
     type CCCashBalance,
     type DepartmentCode,
@@ -255,7 +255,7 @@ function FinanceDashboard({ topLevel = false }: { topLevel?: boolean }) {
     const { sales, purchase } = useSalesPurchaseMetrics();
     const receivables = useScopedData(getClientOutStandingSummary);
     const payables = useScopedData(getVendorOutStandingSummary);
-    const gst = useScopedData(getStockPurchaseConsolidateSummary);
+    const gst = useScopedData(getGSTPositionSummary);
 
     const r = receivables.data;
     const p = payables.data;
@@ -338,6 +338,9 @@ function FinanceDashboard({ topLevel = false }: { topLevel?: boolean }) {
                     { id: 'client-gst-split', label: 'IGST · CGST · SGST', sub: true, text: split(g?.ClientIGST, g?.ClientCGST, g?.ClientSGST), valueClass: 'text-gray-500' },
                     { divider: true },
                     { label: 'Inward GST (vendors)', value: inward, dot: C.blue, bold: true },
+                    { id: 'vendor-invoices', label: 'Invoices', value: g?.VendorInvoiceGST, sub: true },
+                    { label: '+ Credit notes', value: g?.VendorCreditNoteGST, sub: true },
+                    { label: '− Debit notes', value: g?.VendorDebitNoteGST, sub: true },
                     { id: 'vendor-gst-split', label: 'IGST · CGST · SGST', sub: true, text: split(g?.VendorIGST, g?.VendorCGST, g?.VendorSGST), valueClass: 'text-gray-500' },
                     { divider: true },
                     {
